@@ -130,6 +130,24 @@ test("Mochizuki starts when browser storage is unavailable", async () => {
   } finally { await context.close(); }
 });
 
+test("favicon links and image load on dashboard and login", async () => {
+  const { page, context } = await pageFor();
+  try {
+    for (const route of ['/#dashboard', '/login']) {
+      await page.goto(baseURL + route);
+      assert.equal(await page.locator('link[rel="icon"][href="/favicon.ico"]').count(), 1);
+      assert.equal(await page.locator('link[rel="icon"][href="/favicon.png"]').count(), 1);
+      const size = await page.evaluate(() => new Promise((resolve, reject) => {
+        const icon = new Image();
+        icon.onload = () => resolve([icon.naturalWidth, icon.naturalHeight]);
+        icon.onerror = () => reject(new Error('favicon failed to decode'));
+        icon.src = '/favicon.png';
+      }));
+      assert.deepEqual(size, [256, 256]);
+    }
+  } finally { await context.close(); }
+});
+
 test("layout and contrast: desktop and touch, light and dark", async t => {
   for (const width of [1440, 375, 320]) for (const colorScheme of ["light", "dark"]) {
     await t.test(width + " " + colorScheme, async () => {

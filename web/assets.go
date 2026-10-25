@@ -8,5 +8,5 @@ import "embed"
 // duplicating them under internal/wui. The directory remains usable as a
 // normal external asset directory during local development.
 //
-//go:embed *.html *.css *.js
+//go:embed *.html *.css *.js favicon.ico favicon.png
 var FS embed.FS

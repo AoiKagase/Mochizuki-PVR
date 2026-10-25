@@ -721,6 +721,10 @@ func (s *server) withAuth(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		if (r.Method == http.MethodGet || r.Method == http.MethodHead) && (r.URL.Path == "/favicon.ico" || r.URL.Path == "/favicon.png") {
+			next.ServeHTTP(w, r)
+			return
+		}
 		identity, valid := s.playbackTicketIdentity(r)
 		if !valid {
 			identity, valid = s.authenticateRequest(r)
