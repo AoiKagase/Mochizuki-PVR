@@ -1,5 +1,7 @@
 # Mochizuki PVR
 
+![Mochizuki PVR ロゴ](docs/assets/mochizuki-pvr-logo.png)
+
 旧 Strata PVR から更新する場合は、[名称変更時の更新手順](docs/UPGRADING_MOCHIZUKI.md) を参照してください。既存の設定と `data/strata.db` を引き継げます。
 
 Mochizuki PVR は、Mirakurun を録画バックエンドとして利用する、Go 製の
