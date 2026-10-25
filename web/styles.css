@@ -312,6 +312,28 @@ body {
   color: var(--brand-ink);
 }
 
+.title-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.title-brand-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  padding: 6px;
+  border-radius: 10px;
+  background: #f7fbff;
+  object-fit: contain;
+}
+
+.title-brand-copy {
+  min-width: 0;
+}
+
 .main-nav {
   position: sticky;
   top: var(--topbar-height);
@@ -3089,6 +3111,20 @@ body.view-settings .settings-grid {
 }
 
 @media (max-width: 820px) {
+  .title-brand {
+    gap: 12px;
+  }
+
+  .title-brand-icon {
+    width: 44px;
+    height: 44px;
+    padding: 4px;
+  }
+
+  .title-brand h1 {
+    font-size: clamp(24px, 4vw, 32px);
+  }
+
   .topbar {
     position: static;
     align-items: flex-start;
