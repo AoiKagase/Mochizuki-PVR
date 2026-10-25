@@ -30,22 +30,22 @@ import (
 	"sync"
 	"time"
 
-	passwordauth "strata-pvr/internal/auth"
-	"strata-pvr/internal/config"
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/logging"
-	"strata-pvr/internal/mirakurun"
-	"strata-pvr/internal/operatorcontrol"
-	"strata-pvr/internal/programstore"
-	"strata-pvr/internal/reservationstore"
-	"strata-pvr/internal/rulestore"
-	"strata-pvr/internal/scheduler"
-	"strata-pvr/internal/schedulestore"
-	"strata-pvr/internal/storage"
-	"strata-pvr/internal/system"
-	"strata-pvr/internal/version"
-	webassets "strata-pvr/web"
+	passwordauth "mochizuki/internal/auth"
+	"mochizuki/internal/config"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/logging"
+	"mochizuki/internal/mirakurun"
+	"mochizuki/internal/operatorcontrol"
+	"mochizuki/internal/programstore"
+	"mochizuki/internal/reservationstore"
+	"mochizuki/internal/rulestore"
+	"mochizuki/internal/scheduler"
+	"mochizuki/internal/schedulestore"
+	"mochizuki/internal/storage"
+	"mochizuki/internal/system"
+	"mochizuki/internal/version"
+	webassets "mochizuki/web"
 )
 
 type Paths struct {
@@ -62,8 +62,8 @@ type Paths struct {
 
 const defaultPreviewPositionSeconds = 60
 const recordingPreviewTailBytes int64 = 12800000
-const strataErrorCodeHeader = "X-Strata-Error-Code"
-const strataErrorTunerUnavailable = "tuner-unavailable"
+const mochizukiErrorCodeHeader = "X-Mochizuki-Error-Code"
+const mochizukiErrorTunerUnavailable = "tuner-unavailable"
 const recordingWatchInitialBytes int64 = recordingPreviewTailBytes
 const recordingPreviewTimeout = 10 * time.Second
 const playbackRequestStopTimeout = 5 * time.Second
@@ -694,7 +694,7 @@ func listenAddress(host string, port int) string {
 
 func (s *server) withCommonHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Server", "Strata PVR")
+		w.Header().Set("Server", "Mochizuki PVR")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
@@ -885,7 +885,7 @@ func (s *server) handleAPITokens(w http.ResponseWriter, r *http.Request) {
 			legacyHTTPError(w, r, http.StatusInternalServerError)
 			return
 		}
-		rawToken := "strata_" + secret
+		rawToken := "mochizuki_" + secret
 		hash := sha256.Sum256([]byte(rawToken))
 		created := time.Now().UTC().Format(time.RFC3339)
 		expiresAt := ""
@@ -1621,10 +1621,10 @@ func (s *server) handleConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodPut {
-		s.updateStrataConfig(w, r, data)
+		s.updateMochizukiConfig(w, r, data)
 		return
 	}
-	data, err = publicStrataConfig(data)
+	data, err = publicMochizukiConfig(data)
 	if err != nil {
 		legacyHTTPError(w, r, http.StatusInternalServerError)
 		return
@@ -1737,10 +1737,13 @@ func (s *server) clearPreviewCache(ctx context.Context) (int, error) {
 	return removed, nil
 }
 
-func publicStrataConfig(data []byte) ([]byte, error) {
+func publicMochizukiConfig(data []byte) ([]byte, error) {
 	var document map[string]any
 	if err := json.Unmarshal(data, &document); err != nil {
 		return nil, err
+	}
+	if schema, _ := document["schema"].(string); config.IsRuntimeSchema(schema) {
+		document["schema"] = config.MochizukiSchema
 	}
 	web, _ := document["web"].(map[string]any)
 	authentication, _ := web["authentication"].(map[string]any)
@@ -1756,7 +1759,7 @@ func publicStrataConfig(data []byte) ([]byte, error) {
 	return json.MarshalIndent(document, "", "  ")
 }
 
-type strataConfigUpdate struct {
+type mochizukiConfigUpdate struct {
 	Schema       string                      `json:"schema"`
 	Version      int                         `json:"version"`
 	WUIWebDir    string                      `json:"wuiWebDir"`
@@ -1781,7 +1784,7 @@ type strataConfigUpdate struct {
 	Advanced config.AdvancedSettings `json:"advanced"`
 }
 
-func (s *server) updateStrataConfig(w http.ResponseWriter, r *http.Request, currentData []byte) {
+func (s *server) updateMochizukiConfig(w http.ResponseWriter, r *http.Request, currentData []byte) {
 	var raw []byte
 	if query := r.URL.Query().Get("json"); query != "" {
 		raw = []byte(query)
@@ -1793,7 +1796,7 @@ func (s *server) updateStrataConfig(w http.ResponseWriter, r *http.Request, curr
 			return
 		}
 	}
-	var update strataConfigUpdate
+	var update mochizukiConfigUpdate
 	if len(raw) == 0 || json.Unmarshal(raw, &update) != nil {
 		legacyHTTPError(w, r, http.StatusBadRequest)
 		return
@@ -1803,7 +1806,7 @@ func (s *server) updateStrataConfig(w http.ResponseWriter, r *http.Request, curr
 		legacyHTTPError(w, r, http.StatusInternalServerError)
 		return
 	}
-	if update.Schema != config.StrataSchema || update.Version != current.Version {
+	if !config.IsRuntimeSchema(update.Schema) || update.Version != current.Version {
 		legacyHTTPError(w, r, http.StatusBadRequest)
 		return
 	}
@@ -1834,7 +1837,7 @@ func (s *server) updateStrataConfig(w http.ResponseWriter, r *http.Request, curr
 		users = append(users, config.WebUser{Username: user.Username, PasswordHash: hash})
 	}
 	doc := config.Document{
-		Schema: update.Schema, Version: update.Version, WUIWebDir: update.WUIWebDir, Mirakurun: update.Mirakurun,
+		Schema: config.MochizukiSchema, Version: update.Version, WUIWebDir: update.WUIWebDir, Mirakurun: update.Mirakurun,
 		Recording: update.Recording, PreviewCache: update.PreviewCache, Services: update.Services, Advanced: update.Advanced,
 		Web: config.WebSettings{
 			ListenAddress: update.Web.ListenAddress, Port: update.Web.Port,
@@ -1865,7 +1868,7 @@ func (s *server) updateStrataConfig(w http.ResponseWriter, r *http.Request, curr
 	*s.cfg = *loaded
 	s.clearSessions()
 	s.clearPlaybackTickets()
-	public, err := publicStrataConfig(encoded)
+	public, err := publicMochizukiConfig(encoded)
 	if err != nil {
 		legacyHTTPError(w, r, http.StatusInternalServerError)
 		return
@@ -3866,7 +3869,7 @@ func (s *server) reserveProgram(w http.ResponseWriter, r *http.Request, program 
 			return
 		}
 		if !available {
-			w.Header().Set(strataErrorCodeHeader, strataErrorTunerUnavailable)
+			w.Header().Set(mochizukiErrorCodeHeader, mochizukiErrorTunerUnavailable)
 			legacyHTTPError(w, r, http.StatusConflict)
 			return
 		}
@@ -3893,7 +3896,7 @@ func (s *server) canStartOnAirManualRecording(ctx context.Context, program legac
 	if err != nil {
 		return false, err
 	}
-	client.UserAgent = mirakurun.StrataUserAgent("wui")
+	client.UserAgent = mirakurun.MochizukiUserAgent("wui")
 	tuners, err := client.Tuners(ctx)
 	if err != nil {
 		return false, err
@@ -3945,7 +3948,7 @@ func (s *server) handleChannelLogo(w http.ResponseWriter, r *http.Request, id, a
 		legacyHTTPError(w, r, http.StatusInternalServerError)
 		return
 	}
-	client.UserAgent = mirakurun.StrataUserAgent("wui")
+	client.UserAgent = mirakurun.MochizukiUserAgent("wui")
 	ctx, cancel := context.WithTimeout(r.Context(), channelLogoFetchTimeout)
 	defer cancel()
 	body, err := client.LogoImage(ctx, serviceID)
@@ -4112,7 +4115,7 @@ func (s *server) handleChannelWatch(w http.ResponseWriter, r *http.Request, id, 
 			legacyHTTPError(w, r, http.StatusInternalServerError)
 			return
 		}
-		client.UserAgent = mirakurun.StrataUserAgent("wui")
+		client.UserAgent = mirakurun.MochizukiUserAgent("wui")
 		body, err := client.ServiceStream(r.Context(), serviceID, true)
 		if err != nil {
 			legacyHTTPError(w, r, http.StatusServiceUnavailable)
@@ -4140,7 +4143,7 @@ func (s *server) handleChannelWatch(w http.ResponseWriter, r *http.Request, id, 
 			legacyHTTPError(w, r, http.StatusInternalServerError)
 			return
 		}
-		client.UserAgent = mirakurun.StrataUserAgent("wui")
+		client.UserAgent = mirakurun.MochizukiUserAgent("wui")
 		body, err := client.ServiceStream(r.Context(), serviceID, true)
 		if err != nil {
 			legacyHTTPError(w, r, http.StatusServiceUnavailable)
@@ -4202,7 +4205,7 @@ func (s *server) handleChannelSubtitles(w http.ResponseWriter, r *http.Request, 
 		if clientErr != nil {
 			return liveSubtitleSource{}, clientErr
 		}
-		client.UserAgent = mirakurun.StrataUserAgent("wui")
+		client.UserAgent = mirakurun.MochizukiUserAgent("wui")
 		body, streamErr := client.ServiceStream(sessionCtx, serviceID, true)
 		if streamErr != nil {
 			return liveSubtitleSource{}, streamErr
@@ -4863,7 +4866,7 @@ func (s *server) status() map[string]any {
 	build := version.Current()
 	return map[string]any{
 		"application": map[string]any{
-			"name":      "Strata PVR",
+			"name":      "Mochizuki PVR",
 			"version":   build.Number,
 			"commit":    build.Commit,
 			"buildDate": build.Date,

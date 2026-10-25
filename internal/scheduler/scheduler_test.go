@@ -12,15 +12,15 @@ import (
 	"testing"
 	"time"
 
-	"strata-pvr/internal/config"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/mirakurun"
-	"strata-pvr/internal/programstore"
-	"strata-pvr/internal/reservationstore"
-	"strata-pvr/internal/rulestore"
-	"strata-pvr/internal/schedulestore"
-	"strata-pvr/internal/storage"
-	"strata-pvr/internal/system"
+	"mochizuki/internal/config"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/mirakurun"
+	"mochizuki/internal/programstore"
+	"mochizuki/internal/reservationstore"
+	"mochizuki/internal/rulestore"
+	"mochizuki/internal/schedulestore"
+	"mochizuki/internal/storage"
+	"mochizuki/internal/system"
 )
 
 type fakeSource struct {
@@ -264,7 +264,7 @@ func TestRunWithSourceWritesScheduleAndReserves(t *testing.T) {
 	}
 }
 
-func TestRunWithSourceWritesSchedulerStateToStrataDatabase(t *testing.T) {
+func TestRunWithSourceWritesSchedulerStateToMochizukiDatabase(t *testing.T) {
 	dir := t.TempDir()
 	now := time.Now()
 	paths := testPaths{

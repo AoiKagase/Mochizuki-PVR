@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/storage"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/storage"
 )
 
 func TestSQLiteScheduleStoreIgnoresLegacyJSON(t *testing.T) {

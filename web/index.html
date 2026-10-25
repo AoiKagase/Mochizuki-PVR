@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Strata PVR WUI</title>
+  <title>Mochizuki PVR WUI</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/styles.css">
 </head>
@@ -79,8 +79,8 @@
   </svg>
   <header class="topbar">
     <div>
-      <h1>Strata PVR</h1>
-      <p>Strata PVR WUI for Mirakurun</p>
+      <h1>Mochizuki PVR</h1>
+      <p>Mochizuki PVR WUI for Mirakurun</p>
     </div>
     <div id="statusBadge" class="status-badge">読み込み中</div>
   </header>
@@ -632,49 +632,49 @@
           </dl>
         </section>
       </div>
-      <section id="strataConfigPanel" class="panel config-form-panel" hidden>
+      <section id="mochizukiConfigPanel" class="panel config-form-panel" hidden>
         <div class="panel-head">
           <div>
-            <h3>Strata設定</h3>
+            <h3>Mochizuki PVR 設定</h3>
             <p>接続、録画、認証を管理します。</p>
           </div>
           <div class="row-actions">
-            <button id="saveStrataConfigButton" type="button" title="Strata設定を保存">保存</button>
+            <button id="saveMochizukiConfigButton" type="button" title="Mochizuki PVR 設定を保存">保存</button>
           </div>
         </div>
-        <form id="strataConfigForm" class="config-form-shell" autocomplete="off" novalidate>
-          <div id="strataConfigValidationSummary" class="config-validation-summary" role="alert" aria-atomic="true" hidden></div>
+        <form id="mochizukiConfigForm" class="config-form-shell" autocomplete="off" novalidate>
+          <div id="mochizukiConfigValidationSummary" class="config-validation-summary" role="alert" aria-atomic="true" hidden></div>
           <fieldset class="config-fieldset">
             <legend>接続</legend>
             <div class="config-form">
-              <label><span>Mirakurun URL</span><input id="strataMirakurunURL" class="config-form-control" type="url" autocomplete="off" placeholder="http://127.0.0.1:40772" required></label>
-              <label><span>待受アドレス</span><input id="strataListenAddress" class="config-form-control" type="text" autocomplete="off" placeholder="0.0.0.0" required></label>
-              <label><span>ポート</span><input id="strataWebPort" class="config-form-control" type="number" min="1" max="65535" step="1" inputmode="numeric" required></label>
+              <label><span>Mirakurun URL</span><input id="mochizukiMirakurunURL" class="config-form-control" type="url" autocomplete="off" placeholder="http://127.0.0.1:40772" required></label>
+              <label><span>待受アドレス</span><input id="mochizukiListenAddress" class="config-form-control" type="text" autocomplete="off" placeholder="0.0.0.0" required></label>
+              <label><span>ポート</span><input id="mochizukiWebPort" class="config-form-control" type="number" min="1" max="65535" step="1" inputmode="numeric" required></label>
             </div>
           </fieldset>
           <fieldset class="config-fieldset">
             <legend>認証</legend>
-            <label class="config-toggle"><input id="strataAuthEnabled" type="checkbox"><span><strong>ログイン認証</strong><small>ネットワーク経由のアクセスにログインを要求します。</small></span></label>
-            <div id="strataAuthUsers" class="config-user-list"></div>
-            <button id="addStrataUserButton" class="secondary-button" type="button">ユーザーを追加</button>
+            <label class="config-toggle"><input id="mochizukiAuthEnabled" type="checkbox"><span><strong>ログイン認証</strong><small>ネットワーク経由のアクセスにログインを要求します。</small></span></label>
+            <div id="mochizukiAuthUsers" class="config-user-list"></div>
+            <button id="addMochizukiUserButton" class="secondary-button" type="button">ユーザーを追加</button>
           </fieldset>
-          <fieldset id="strataAPITokensSection" class="config-fieldset" hidden>
+          <fieldset id="mochizukiAPITokensSection" class="config-fieldset" hidden>
             <legend>APIトークン</legend>
             <p class="config-help">外部プログラムは <code>Authorization: Bearer &lt;token&gt;</code> で利用できます。トークンは発行時に一度だけ表示されます。</p>
             <div class="config-form">
-              <label><span>トークン名</span><input id="strataAPITokenName" class="config-form-control" type="text" maxlength="64" autocomplete="off" placeholder="例: home-assistant"></label>
-              <button id="createStrataAPITokenButton" class="secondary-button" type="button">トークンを発行</button>
+              <label><span>トークン名</span><input id="mochizukiAPITokenName" class="config-form-control" type="text" maxlength="64" autocomplete="off" placeholder="例: home-assistant"></label>
+              <button id="createMochizukiAPITokenButton" class="secondary-button" type="button">トークンを発行</button>
             </div>
-            <div id="strataAPITokenSecret" class="config-help" hidden></div>
-            <div id="strataAPITokens" class="config-user-list"></div>
+            <div id="mochizukiAPITokenSecret" class="config-help" hidden></div>
+            <div id="mochizukiAPITokens" class="config-user-list"></div>
           </fieldset>
           <fieldset class="config-fieldset">
             <legend>録画</legend>
             <div class="config-form">
-              <label><span>保存先</span><input id="strataRecordingDirectory" class="config-form-control" type="text" autocomplete="off" required></label>
+              <label><span>保存先</span><input id="mochizukiRecordingDirectory" class="config-form-control" type="text" autocomplete="off" required></label>
               <div class="filename-format-field">
-                <label><span>ファイル名形式</span><input id="strataFilenameFormat" class="config-form-control" type="text" autocomplete="off" required aria-describedby="strataFilenameFormatHelp"></label>
-                <div id="strataFilenameFormatHelp" class="filename-format-help">
+                <label><span>ファイル名形式</span><input id="mochizukiFilenameFormat" class="config-form-control" type="text" autocomplete="off" required aria-describedby="mochizukiFilenameFormatHelp"></label>
+                <div id="mochizukiFilenameFormatHelp" class="filename-format-help">
                   <p><code>&lt;...&gt;</code> で囲まれた部分は、録画時に番組情報へ置き換わる「置換タグ」です。タグ以外の文字はそのままファイル名に残ります。</p>
                   <p class="filename-format-example">例: <code>&lt;title&gt;.m2ts</code> → <code>番組タイトル.m2ts</code></p>
                   <details>
@@ -698,43 +698,43 @@
                   </details>
                 </div>
               </div>
-              <label><span>録画開始マージン（秒、負数可）</span><input id="strataRecordingStartMargin" class="config-form-control" type="number" step="1" inputmode="numeric" title="正数で番組開始時刻より前、負数で番組開始時刻より後に録画を開始します。" required></label>
-              <label><span>録画終了マージン（秒、負数可）</span><input id="strataRecordingEndMargin" class="config-form-control" type="number" step="1" inputmode="numeric" title="正数で番組終了時刻より後、負数で番組終了時刻より前に録画を終了します。" required></label>
-              <label><span>録画優先度</span><input id="strataRecordingPriority" class="config-form-control" type="number" step="1" inputmode="numeric"></label>
-              <label><span>競合優先度</span><input id="strataConflictedPriority" class="config-form-control" type="number" step="1" inputmode="numeric"></label>
-              <label><span>空き容量しきい値 MB</span><input id="strataLowSpaceThreshold" class="config-form-control" type="number" min="0" step="1" inputmode="numeric"></label>
-              <label><span>容量不足時の動作</span><select id="strataLowSpaceAction" class="config-form-control"><option value="remove">古い録画を削除</option><option value="stop">録画を停止</option></select></label>
-              <label><span>プレビュー保持日数</span><input id="strataPreviewCacheMaxAge" class="config-form-control" type="number" min="0" step="1" inputmode="numeric"></label>
-              <label><span>プレビュー上限 MB</span><input id="strataPreviewCacheMaxSize" class="config-form-control" type="number" min="0" step="1" inputmode="numeric"></label>
+              <label><span>録画開始マージン（秒、負数可）</span><input id="mochizukiRecordingStartMargin" class="config-form-control" type="number" step="1" inputmode="numeric" title="正数で番組開始時刻より前、負数で番組開始時刻より後に録画を開始します。" required></label>
+              <label><span>録画終了マージン（秒、負数可）</span><input id="mochizukiRecordingEndMargin" class="config-form-control" type="number" step="1" inputmode="numeric" title="正数で番組終了時刻より後、負数で番組終了時刻より前に録画を終了します。" required></label>
+              <label><span>録画優先度</span><input id="mochizukiRecordingPriority" class="config-form-control" type="number" step="1" inputmode="numeric"></label>
+              <label><span>競合優先度</span><input id="mochizukiConflictedPriority" class="config-form-control" type="number" step="1" inputmode="numeric"></label>
+              <label><span>空き容量しきい値 MB</span><input id="mochizukiLowSpaceThreshold" class="config-form-control" type="number" min="0" step="1" inputmode="numeric"></label>
+              <label><span>容量不足時の動作</span><select id="mochizukiLowSpaceAction" class="config-form-control"><option value="remove">古い録画を削除</option><option value="stop">録画を停止</option></select></label>
+              <label><span>プレビュー保持日数</span><input id="mochizukiPreviewCacheMaxAge" class="config-form-control" type="number" min="0" step="1" inputmode="numeric"></label>
+              <label><span>プレビュー上限 MB</span><input id="mochizukiPreviewCacheMaxSize" class="config-form-control" type="number" min="0" step="1" inputmode="numeric"></label>
             </div>
             <div class="config-action-row">
               <div class="config-action-copy"><strong>プレビューキャッシュ</strong><small>保存済みのプレビュー画像をすべて削除します。次回表示時に再生成されます。</small></div>
-              <button id="clearStrataPreviewCacheButton" class="danger-button" type="button">キャッシュをクリア</button>
+              <button id="clearMochizukiPreviewCacheButton" class="danger-button" type="button">キャッシュをクリア</button>
             </div>
             <div class="config-action-row">
               <div class="config-action-copy"><strong>局ロゴキャッシュ</strong><small>保存済みの局ロゴをすべて削除します。次回表示時に最新のロゴを取得します。</small></div>
-              <button id="clearStrataLogoCacheButton" class="danger-button" type="button">ロゴをクリア</button>
+              <button id="clearMochizukiLogoCacheButton" class="danger-button" type="button">ロゴをクリア</button>
             </div>
           </fieldset>
           <fieldset class="config-fieldset">
             <legend>サービス</legend>
             <div class="config-form">
-              <label><span>除外サービス</span><input id="strataExcludedServices" class="config-form-control" type="text" inputmode="numeric" placeholder="32736, 32737"></label>
-              <label><span>サービス順</span><input id="strataServiceOrder" class="config-form-control" type="text" inputmode="numeric" placeholder="32736, 32737"></label>
-              <label><span>文字正規化</span><select id="strataNormalizationForm" class="config-form-control"><option value="">未設定</option><option value="NFC">NFC</option><option value="NFD">NFD</option><option value="NFKC">NFKC</option><option value="NFKD">NFKD</option></select></label>
+              <label><span>除外サービス</span><input id="mochizukiExcludedServices" class="config-form-control" type="text" inputmode="numeric" placeholder="32736, 32737"></label>
+              <label><span>サービス順</span><input id="mochizukiServiceOrder" class="config-form-control" type="text" inputmode="numeric" placeholder="32736, 32737"></label>
+              <label><span>文字正規化</span><select id="mochizukiNormalizationForm" class="config-form-control"><option value="">未設定</option><option value="NFC">NFC</option><option value="NFD">NFD</option><option value="NFKC">NFKC</option><option value="NFKD">NFKD</option></select></label>
             </div>
           </fieldset>
           <fieldset class="config-fieldset">
             <legend>録画後処理</legend>
-            <p id="strataPostProcessHelp" class="config-help">録画が正常完了した後に実行するコマンドです。実行ファイルと引数を分けて指定します。登録順に実行し、失敗またはタイムアウトした場合は後続を実行しません。未指定なら実行しません。</p>
-            <div id="strataPostProcessCommands" class="post-process-command-list" aria-describedby="strataPostProcessHelp"></div>
+            <p id="mochizukiPostProcessHelp" class="config-help">録画が正常完了した後に実行するコマンドです。実行ファイルと引数を分けて指定します。登録順に実行し、失敗またはタイムアウトした場合は後続を実行しません。未指定なら実行しません。</p>
+            <div id="mochizukiPostProcessCommands" class="post-process-command-list" aria-describedby="mochizukiPostProcessHelp"></div>
             <button id="addPostProcessCommandButton" class="secondary-button" type="button">コマンドを追加</button>
             <div class="config-form config-form-detail">
-              <label><span>タイムアウト（秒）</span><input id="strataPostProcessTimeout" class="config-form-control" type="number" min="0" step="1" inputmode="numeric" required aria-describedby="strataPostProcessTimeoutHelp"></label>
-              <label><span>最大同時実行数</span><input id="strataPostProcessMaxConcurrent" class="config-form-control" type="number" min="0" step="1" inputmode="numeric" required aria-describedby="strataPostProcessMaxConcurrentHelp"></label>
+              <label><span>タイムアウト（秒）</span><input id="mochizukiPostProcessTimeout" class="config-form-control" type="number" min="0" step="1" inputmode="numeric" required aria-describedby="mochizukiPostProcessTimeoutHelp"></label>
+              <label><span>最大同時実行数</span><input id="mochizukiPostProcessMaxConcurrent" class="config-form-control" type="number" min="0" step="1" inputmode="numeric" required aria-describedby="mochizukiPostProcessMaxConcurrentHelp"></label>
             </div>
-            <p id="strataPostProcessTimeoutHelp" class="config-help">0 は既定の 10 分です。コマンドの終了コードと出力は operator ログに記録され、失敗しても録画済みファイルは保持されます。</p>
-            <p id="strataPostProcessMaxConcurrentHelp" class="config-help">0 は 1 件です。複数の録画が完了した場合も、この数までコマンド列を同時に実行します。</p>
+            <p id="mochizukiPostProcessTimeoutHelp" class="config-help">0 は既定の 10 分です。コマンドの終了コードと出力は operator ログに記録され、失敗しても録画済みファイルは保持されます。</p>
+            <p id="mochizukiPostProcessMaxConcurrentHelp" class="config-help">0 は 1 件です。複数の録画が完了した場合も、この数までコマンド列を同時に実行します。</p>
             <details class="post-process-help">
               <summary>FFmpeg の記述例と利用可能な値</summary>
               <p>例として、録画を MP4 に再エンコードする場合は、コマンドに <code>ffmpeg</code> を指定し、以下を引数として 1 行ずつ入力します。<code>-crf</code> が画質（小さいほど高画質）、<code>-preset</code> がエンコード速度です。</p>
@@ -747,9 +747,9 @@
           <fieldset class="config-fieldset">
             <legend>再生</legend>
             <div class="config-form">
-              <label><span>MP4 映像エンコーダー</span><select id="strataMP4VideoEncoder" class="config-form-control" aria-describedby="strataMP4VideoEncoderHelp"></select></label>
+              <label><span>MP4 映像エンコーダー</span><select id="mochizukiMP4VideoEncoder" class="config-form-control" aria-describedby="mochizukiMP4VideoEncoderHelp"></select></label>
             </div>
-            <p id="strataMP4VideoEncoderHelp" class="config-help">FFmpeg で実際に利用できる H.264 エンコーダーのみ表示します。ハードウェアエンコーダーがない環境ではソフトウェアエンコーダーのみ選択できます。</p>
+            <p id="mochizukiMP4VideoEncoderHelp" class="config-help">FFmpeg で実際に利用できる H.264 エンコーダーのみ表示します。ハードウェアエンコーダーがない環境ではソフトウェアエンコーダーのみ選択できます。</p>
           </fieldset>
         </form>
       </section>

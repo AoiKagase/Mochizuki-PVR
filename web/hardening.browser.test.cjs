@@ -1,7 +1,7 @@
 "use strict";
 
-// STRATA_AUDIT_PLAYWRIGHT may point to an installed Playwright package.
-const { chromium } = require(process.env.STRATA_AUDIT_PLAYWRIGHT || "playwright");
+// MOCHIZUKI_AUDIT_PLAYWRIGHT may point to an installed Playwright package.
+const { chromium } = require(process.env.MOCHIZUKI_AUDIT_PLAYWRIGHT || "playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -9,7 +9,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { test, before, after } = require("node:test");
 let browser, server, baseURL;
-const captures = process.env.STRATA_AUDIT_OUTPUT;
+const captures = process.env.MOCHIZUKI_AUDIT_OUTPUT;
 const results = [];
 const now = Date.now();
 const channel = { id: "audit-gr", name: "監査チャンネル", type: "GR", channel: "27", sid: 101 };
@@ -43,7 +43,7 @@ before(async () => {
   });
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   baseURL = "http://127.0.0.1:" + server.address().port;
-  browser = await chromium.launch({ headless: true, args: ["--log-file=" + path.join(os.tmpdir(), "strata-hardening-chromium.log")] });
+  browser = await chromium.launch({ headless: true, args: ["--log-file=" + path.join(os.tmpdir(), "mochizuki-hardening-chromium.log")] });
 });
 
 after(async () => {
@@ -88,6 +88,48 @@ async function capture(page, name) {
   }
 }
 
+test("Mochizuki branding and legacy browser preferences", async () => {
+  const { page, context } = await pageFor();
+  try {
+    const preferences = {
+      scheduleHiddenChannels: '["hidden-channel"]',
+      listFilters: '{"recorded":{"keyword":"existing"}}',
+      recordedPageSize: '100',
+      recordedViewMode: 'list',
+      scheduleZoomLevel: 'detail'
+    };
+    await page.addInitScript(values => {
+      for (const [name, value] of Object.entries(values)) localStorage.setItem('strata-pvr.' + name, value);
+      localStorage.setItem('mochizuki.recordedPageSize', '200');
+    }, preferences);
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await loaded(page, 'settings');
+    assert.equal(await page.title(), 'Mochizuki PVR WUI');
+    assert.equal(await page.locator('h1').textContent(), 'Mochizuki PVR');
+    await page.locator('#mochizukiConfigPanel').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#mochizukiMirakurunURL').inputValue(), 'http://127.0.0.1:40772');
+    const stored = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
+    for (const [name, value] of Object.entries(preferences)) {
+      assert.equal(stored['mochizuki.' + name], name === 'recordedPageSize' ? '200' : value);
+      assert.equal(stored['strata-pvr.' + name], value);
+    }
+    await capture(page, 'mochizuki-settings');
+    await page.goto(baseURL + '/login');
+    assert.match(await page.title(), /Mochizuki PVR/);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
+test("Mochizuki starts when browser storage is unavailable", async () => {
+  const { page, context } = await pageFor();
+  try {
+    await page.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('disabled', 'SecurityError'); } }));
+    await loaded(page);
+    assert.equal(await page.locator('h1').textContent(), 'Mochizuki PVR');
+  } finally { await context.close(); }
+});
+
 test("layout and contrast: desktop and touch, light and dark", async t => {
   for (const width of [1440, 375, 320]) for (const colorScheme of ["light", "dark"]) {
     await t.test(width + " " + colorScheme, async () => {
@@ -110,11 +152,11 @@ test("layout and contrast: desktop and touch, light and dark", async t => {
         results.push({ width, colorScheme, normal, hover, focus });
         assert.ok(Math.min(normal, hover, focus) >= 4.5, JSON.stringify({ normal, hover, focus }));
         await loaded(page, "settings");
-        await page.locator("#strataMP4VideoEncoder").waitFor({ state: "visible" });
+        await page.locator("#mochizukiMP4VideoEncoder").waitFor({ state: "visible" });
         const overflow = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
         results.push({ width, colorScheme, route: "settings", ...overflow });
         assert.ok(overflow.scroll <= width, JSON.stringify(overflow));
-        await page.locator("#strataMP4VideoEncoder").evaluate(e => { e.innerHTML = ""; e.add(new Option("非常に長いエンコーダー名🖥️".repeat(15), "long")); });
+        await page.locator("#mochizukiMP4VideoEncoder").evaluate(e => { e.innerHTML = ""; e.add(new Option("非常に長いエンコーダー名🖥️".repeat(15), "long")); });
         const longOptionScroll = await page.evaluate(() => document.documentElement.scrollWidth);
         assert.ok(longOptionScroll <= width, "long option overflow: " + longOptionScroll);
         await loaded(page, "search");

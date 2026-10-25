@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
 )
 
 func Read(ctx context.Context, databasePath string) ([]legacy.Program, error) {

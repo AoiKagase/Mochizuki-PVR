@@ -8,7 +8,14 @@ import (
 	"time"
 )
 
-const StrataSchema = "strata/config"
+const MochizukiSchema = "mochizuki/config"
+
+// LegacySchema is accepted on read and normalized when settings are saved.
+const LegacySchema = "strata/config"
+
+func IsRuntimeSchema(schema string) bool {
+	return schema == MochizukiSchema || schema == LegacySchema
+}
 
 type Document struct {
 	Schema       string               `json:"schema"`
@@ -171,7 +178,7 @@ func Parse(b []byte) (*Config, error) {
 		return nil, err
 	}
 	if marker.Schema == "" {
-		return nil, fmt.Errorf("legacy config is not a Strata runtime config; run strata-pvr migrate")
+		return nil, fmt.Errorf("legacy config is not a Mochizuki runtime config; run mochizuki migrate")
 	}
 	return loadDocument(b)
 }
@@ -192,7 +199,7 @@ func ParseLegacy(b []byte) (*LegacyConfig, error) {
 		return nil, err
 	}
 	if marker.Schema != nil {
-		return nil, fmt.Errorf("Strata config cannot be used as legacy migration input")
+		return nil, fmt.Errorf("Mochizuki config cannot be used as legacy migration input")
 	}
 	cfg := defaultLegacyConfig()
 	if err := json.Unmarshal(b, cfg); err != nil {
@@ -226,6 +233,7 @@ func ParseDocument(b []byte) (Document, error) {
 	if _, err := loadDocument(b); err != nil {
 		return Document{}, err
 	}
+	doc.Schema = MochizukiSchema
 	return doc, nil
 }
 
@@ -234,11 +242,11 @@ func loadDocument(b []byte) (*Config, error) {
 	if err := json.Unmarshal(b, &doc); err != nil {
 		return nil, err
 	}
-	if doc.Schema != StrataSchema {
+	if !IsRuntimeSchema(doc.Schema) {
 		return nil, fmt.Errorf("unsupported config schema %q", doc.Schema)
 	}
 	if doc.Version != 1 {
-		return nil, fmt.Errorf("unsupported %s version %d", StrataSchema, doc.Version)
+		return nil, fmt.Errorf("unsupported %s version %d", MochizukiSchema, doc.Version)
 	}
 	if doc.Mirakurun.URL == "" {
 		return nil, fmt.Errorf("mirakurun.url is required")
@@ -339,7 +347,7 @@ func loadDocument(b []byte) (*Config, error) {
 
 func DefaultDocument() Document {
 	return Document{
-		Schema:  StrataSchema,
+		Schema:  MochizukiSchema,
 		Version: 1,
 		Mirakurun: MirakurunSettings{
 			URL:                "http://127.0.0.1:40772",

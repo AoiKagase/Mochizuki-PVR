@@ -5,6 +5,8 @@
 .tokensave/
 strata-pvr
 strata-pvr.exe
+/mochizuki
+/mochizuki.exe
 
 # Local/non-public dotfiles and directories. Keep .git* files/directories,
 # including .github/.

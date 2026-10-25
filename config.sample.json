@@ -1,5 +1,5 @@
 {
-  "schema": "strata/config",
+  "schema": "mochizuki/config",
   "version": 1,
   "mirakurun": {
     "url": "http://127.0.0.1:40772",

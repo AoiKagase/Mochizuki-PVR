@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"strata-pvr/internal/config"
+	"mochizuki/internal/config"
 )
 
 func TestDetectH264EncoderPrefersX264(t *testing.T) {

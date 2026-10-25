@@ -22,11 +22,11 @@ type Client struct {
 const legacyVersion = "0.10.7-gamma.1"
 const requestTimeout = 30 * time.Second
 
-func StrataUserAgent(component string) string {
+func MochizukiUserAgent(component string) string {
 	if component == "" {
-		return "StrataPVR/" + legacyVersion
+		return "MochizukiPVR/" + legacyVersion
 	}
-	return "StrataPVR/" + legacyVersion + " (" + component + ")"
+	return "MochizukiPVR/" + legacyVersion + " (" + component + ")"
 }
 
 func (c *Client) SetPriority(priority int) {
@@ -37,7 +37,7 @@ func New(raw string) (*Client, error) {
 	if raw == "" {
 		raw = "http+unix://%2Fvar%2Frun%2Fmirakurun.sock/"
 	}
-	c := &Client{UserAgent: StrataUserAgent("go")}
+	c := &Client{UserAgent: MochizukiUserAgent("go")}
 	if strings.HasPrefix(raw, "http+unix://") {
 		rest := strings.TrimPrefix(raw, "http+unix://")
 		host := rest

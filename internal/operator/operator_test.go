@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"strata-pvr/internal/config"
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/programstore"
-	"strata-pvr/internal/reservationstore"
-	"strata-pvr/internal/storage"
-	"strata-pvr/internal/system"
+	"mochizuki/internal/config"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/programstore"
+	"mochizuki/internal/reservationstore"
+	"mochizuki/internal/storage"
+	"mochizuki/internal/system"
 )
 
 type fakeStreamer struct {
@@ -829,7 +829,7 @@ func TestRunOnceRecordsDueProgram(t *testing.T) {
 	)
 }
 
-func TestRunOnceMovesProgramToRecordedInStrataDatabase(t *testing.T) {
+func TestRunOnceMovesProgramToRecordedInMochizukiDatabase(t *testing.T) {
 	dir := t.TempDir()
 	now := time.Unix(1000, 0)
 	paths := testPaths{

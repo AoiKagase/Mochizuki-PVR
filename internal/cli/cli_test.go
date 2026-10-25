@@ -12,16 +12,16 @@ import (
 	"testing"
 	"time"
 
-	passwordauth "strata-pvr/internal/auth"
-	"strata-pvr/internal/config"
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/operatorcontrol"
-	"strata-pvr/internal/programstore"
-	"strata-pvr/internal/reservationstore"
-	"strata-pvr/internal/rulestore"
-	"strata-pvr/internal/schedulestore"
-	"strata-pvr/internal/storage"
+	passwordauth "mochizuki/internal/auth"
+	"mochizuki/internal/config"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/operatorcontrol"
+	"mochizuki/internal/programstore"
+	"mochizuki/internal/reservationstore"
+	"mochizuki/internal/rulestore"
+	"mochizuki/internal/schedulestore"
+	"mochizuki/internal/storage"
 )
 
 func TestMain(m *testing.M) {
@@ -69,16 +69,16 @@ func seedCLITestDatabase(p paths) {
 	}
 }
 
-func TestRequireStrataRuntimeRejectsLegacyRootConfig(t *testing.T) {
+func TestRequireMochizukiRuntimeRejectsLegacyRootConfig(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "config.json"), []byte(`{"mirakurunPath":"http://127.0.0.1:40772"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	err := requireStrataRuntime(paths{
+	err := requireMochizukiRuntime(paths{
 		config:   filepath.Join(dir, "data", "config.json"),
 		database: filepath.Join(dir, "data", "strata.db"),
 	})
-	if err == nil || !strings.Contains(err.Error(), "run strata-pvr init or migrate") {
+	if err == nil || !strings.Contains(err.Error(), "run mochizuki init or migrate") {
 		t.Fatalf("unexpected runtime validation error: %v", err)
 	}
 }
@@ -107,7 +107,7 @@ func TestHelp(t *testing.T) {
 }
 
 func TestSchedulerTimerConfiguration(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("..", "..", "contrib", "systemd", "strata-pvr-scheduler.timer"))
+	data, err := os.ReadFile(filepath.Join("..", "..", "contrib", "systemd", "mochizuki-scheduler.timer"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestSchedulerTimerConfiguration(t *testing.T) {
 		"OnUnitActiveSec=10min",
 		"AccuracySec=1min",
 		"Persistent=true",
-		"Unit=strata-pvr-scheduler.service",
+		"Unit=mochizuki-scheduler.service",
 	} {
 		if !strings.Contains(string(data), want) {
 			t.Fatalf("scheduler timer missing %q: %s", want, data)
@@ -124,7 +124,7 @@ func TestSchedulerTimerConfiguration(t *testing.T) {
 	}
 }
 
-func TestMigrateChinachuCreatesStrataDataAndArchivesInput(t *testing.T) {
+func TestMigrateChinachuCreatesMochizukiDataAndArchivesInput(t *testing.T) {
 	dir := t.TempDir()
 	old, err := os.Getwd()
 	if err != nil {
@@ -538,7 +538,7 @@ func mustReadCLIFile(t *testing.T, path string) []byte {
 	return data
 }
 
-func TestInitializeStrataCreatesConfigAndDatabase(t *testing.T) {
+func TestInitializeMochizukiCreatesConfigAndDatabase(t *testing.T) {
 	dir := t.TempDir()
 	old, err := os.Getwd()
 	if err != nil {
@@ -569,7 +569,7 @@ func TestInitializeStrataCreatesConfigAndDatabase(t *testing.T) {
 	}
 }
 
-func TestInitializeStrataRejectsLegacyConfig(t *testing.T) {
+func TestInitializeMochizukiRejectsLegacyConfig(t *testing.T) {
 	dir := t.TempDir()
 	old, err := os.Getwd()
 	if err != nil {
@@ -600,15 +600,15 @@ func TestServiceInitscriptIncludesRestart(t *testing.T) {
 	text := out.String()
 	for _, want := range []string{
 		"### BEGIN INIT INFO",
-		"# Provides:          strata-pvr-operator",
-		"# Short-Description: starts the Strata PVR operator",
-		"STRATA_PVR_DIR=" + shellQuote(filepath.ToSlash(cwd)),
-		"DAEMON=${STRATA_PVR_DIR}/strata-pvr",
+		"# Provides:          mochizuki-operator",
+		"# Short-Description: starts the Mochizuki PVR operator",
+		"MOCHIZUKI_PVR_DIR=" + shellQuote(filepath.ToSlash(cwd)),
+		"DAEMON=${MOCHIZUKI_PVR_DIR}/mochizuki",
 		`DAEMON_OPTS="run operator"`,
-		"NAME=strata-pvr-operator",
+		"NAME=mochizuki-operator",
 		"USER=$USER",
-		"PIDFILE=/var/run/strata-pvr-operator.pid",
-		"cd $STRATA_PVR_DIR || exit 1",
+		"PIDFILE=/var/run/mochizuki-operator.pid",
+		"cd $MOCHIZUKI_PVR_DIR || exit 1",
 		"test -x $DAEMON || exit 0",
 		`PID=$(su $USER -c "exec $DAEMON $DAEMON_OPTS < /dev/null > /dev/null 2>&1 & echo \$!")`,
 		"PGID=$(ps -p $PID -o pgrp | grep -v PGRP)",
@@ -631,11 +631,11 @@ func TestServiceSchedulerInitscript(t *testing.T) {
 	}
 	text := out.String()
 	for _, want := range []string{
-		"# Provides:          strata-pvr-scheduler",
-		"# Short-Description: starts the Strata PVR scheduler",
+		"# Provides:          mochizuki-scheduler",
+		"# Short-Description: starts the Mochizuki PVR scheduler",
 		`DAEMON_OPTS="run scheduler"`,
-		"NAME=strata-pvr-scheduler",
-		"PIDFILE=/var/run/strata-pvr-scheduler.pid",
+		"NAME=mochizuki-scheduler",
+		"PIDFILE=/var/run/mochizuki-scheduler.pid",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("scheduler initscript missing %q: %s", want, text)
@@ -848,7 +848,7 @@ func TestCleanupSimulationKeepsRecordedList(t *testing.T) {
 	}
 }
 
-func TestCleanupRemovesStrataRecordedRowAndPreviewCache(t *testing.T) {
+func TestCleanupRemovesMochizukiRecordedRowAndPreviewCache(t *testing.T) {
 	dir := t.TempDir()
 	old, _ := os.Getwd()
 	defer os.Chdir(old)
@@ -1324,7 +1324,7 @@ func TestStopMarksRecordingAbortAndAutoReserveSkip(t *testing.T) {
 	}
 }
 
-func TestStopUsesStrataDatabaseWithoutRewritingJSON(t *testing.T) {
+func TestStopUsesMochizukiDatabaseWithoutRewritingJSON(t *testing.T) {
 	dir := t.TempDir()
 	old, _ := os.Getwd()
 	defer os.Chdir(old)

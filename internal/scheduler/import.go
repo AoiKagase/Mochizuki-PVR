@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"strata-pvr/internal/config"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/mirakurun"
+	"mochizuki/internal/config"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/mirakurun"
 )
 
 var genreTable = map[int]string{

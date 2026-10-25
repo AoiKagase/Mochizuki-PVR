@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"strata-pvr/internal/storage"
+	"mochizuki/internal/storage"
 )
 
 func TestLoadLegacyIgnoresUnknownFieldsAndAppliesDefaults(t *testing.T) {
@@ -74,11 +74,11 @@ func TestSampleConfigLoads(t *testing.T) {
 		t.Fatal("sample config has no recordedFormat")
 	}
 	if cfg.WUIAuthenticationEnabled {
-		t.Fatalf("sample config should be native Strata with authentication disabled: %#v", cfg)
+		t.Fatalf("sample config should be native Mochizuki with authentication disabled: %#v", cfg)
 	}
 }
 
-func TestLoadStrataDocument(t *testing.T) {
+func TestLoadMochizukiDocument(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.json")
 	doc := DefaultDocument()
@@ -98,10 +98,10 @@ func TestLoadStrataDocument(t *testing.T) {
 		t.Fatal(err)
 	}
 	if cfg.MirakurunPath != doc.Mirakurun.URL || cfg.WUIPort != doc.Web.Port {
-		t.Fatalf("Strata document was not mapped: %#v", cfg)
+		t.Fatalf("Mochizuki document was not mapped: %#v", cfg)
 	}
 	if len(cfg.WUIAccounts) != 1 || cfg.WUIAccounts[0].Username != "admin" {
-		t.Fatalf("Strata accounts were not mapped: %#v", cfg.WUIAccounts)
+		t.Fatalf("Mochizuki accounts were not mapped: %#v", cfg.WUIAccounts)
 	}
 }
 
@@ -121,7 +121,7 @@ func TestRecordingMarginsUseDefaultsAndMapToRuntimeConfig(t *testing.T) {
 		t.Fatalf("recording margins = %d/%d, want 7/11", cfg.RecordingStartMargin, cfg.RecordingEndMargin)
 	}
 
-	withoutStart := []byte(`{"schema":"strata/config","version":1,"mirakurun":{"url":"http://127.0.0.1:40772"},"recording":{"directory":"./recorded/","filenameFormat":"<id>.m2ts","lowSpace":{"thresholdMB":0,"action":"remove"}},"web":{"listenAddress":"127.0.0.1","port":20772,"authentication":{"enabled":false}},"services":{}}`)
+	withoutStart := []byte(`{"schema":"mochizuki/config","version":1,"mirakurun":{"url":"http://127.0.0.1:40772"},"recording":{"directory":"./recorded/","filenameFormat":"<id>.m2ts","lowSpace":{"thresholdMB":0,"action":"remove"}},"web":{"listenAddress":"127.0.0.1","port":20772,"authentication":{"enabled":false}},"services":{}}`)
 	cfg, err = Parse(withoutStart)
 	if err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestParseAcceptsNegativeRecordingMargins(t *testing.T) {
 	}
 }
 
-func TestLoadStrataDocumentMapsWUIWebDir(t *testing.T) {
+func TestLoadMochizukiDocumentMapsWUIWebDir(t *testing.T) {
 	doc := DefaultDocument()
 	doc.WUIWebDir = "./custom-web"
 	b, err := json.Marshal(doc)
@@ -164,7 +164,7 @@ func TestLoadStrataDocumentMapsWUIWebDir(t *testing.T) {
 	}
 }
 
-func TestLoadStrataDocumentMapsMP4VideoEncoder(t *testing.T) {
+func TestLoadMochizukiDocumentMapsMP4VideoEncoder(t *testing.T) {
 	doc := DefaultDocument()
 	doc.Advanced.MP4VideoEncoder = "h264_nvenc"
 	b, err := json.Marshal(doc)
@@ -180,7 +180,7 @@ func TestLoadStrataDocumentMapsMP4VideoEncoder(t *testing.T) {
 	}
 }
 
-func TestLoadStrataDocumentMapsPostProcess(t *testing.T) {
+func TestLoadMochizukiDocumentMapsPostProcess(t *testing.T) {
 	doc := DefaultDocument()
 	doc.Recording.PostProcess = PostProcessSettings{
 		Commands:          []PostProcessCommand{{Command: "/usr/local/bin/archive", Arguments: []string{"{recordedPath}"}}},
@@ -203,7 +203,7 @@ func TestLoadStrataDocumentMapsPostProcess(t *testing.T) {
 	}
 }
 
-func TestLoadStrataDocumentMigratesLegacyPostProcessCommand(t *testing.T) {
+func TestLoadMochizukiDocumentMigratesLegacyPostProcessCommand(t *testing.T) {
 	doc := DefaultDocument()
 	doc.Recording.PostProcess.Command = []string{"/usr/local/bin/archive", "{recordedPath}"}
 	b, err := json.Marshal(doc)
@@ -232,7 +232,7 @@ func TestParseRejectsInvalidPostProcessSettings(t *testing.T) {
 	}
 }
 
-func TestLoadStrataDocumentUsesOpenListenerWhenAuthenticationDisabled(t *testing.T) {
+func TestLoadMochizukiDocumentUsesOpenListenerWhenAuthenticationDisabled(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.json")
 	if err := storage.WriteJSONAtomic(path, DefaultDocument(), true); err != nil {

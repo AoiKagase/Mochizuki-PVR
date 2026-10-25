@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"strata-pvr/internal/logging"
-	"strata-pvr/internal/mirakurun"
+	"mochizuki/internal/logging"
+	"mochizuki/internal/mirakurun"
 )
 
 const (
@@ -320,7 +320,7 @@ func (s *server) startLiveMSESession(
 	if err != nil {
 		return nil, err
 	}
-	client.UserAgent = mirakurun.StrataUserAgent("wui")
+	client.UserAgent = mirakurun.MochizukiUserAgent("wui")
 	body, err := client.ServiceStream(sessionCtx, serviceID, true)
 	if err != nil {
 		return nil, err
@@ -389,7 +389,7 @@ func (s *server) subscribeLiveMSESubtitles(ctx context.Context, session *liveMSE
 		if err != nil {
 			return liveSubtitleSource{}, err
 		}
-		client.UserAgent = mirakurun.StrataUserAgent("wui")
+		client.UserAgent = mirakurun.MochizukiUserAgent("wui")
 		body, err := client.ServiceStream(sessionCtx, session.serviceID, true)
 		if err != nil {
 			return liveSubtitleSource{}, err

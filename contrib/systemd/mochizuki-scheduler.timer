@@ -1,12 +1,12 @@
 [Unit]
-Description=Run Strata PVR scheduler periodically
+Description=Run Mochizuki PVR scheduler periodically
 
 [Timer]
 OnBootSec=2min
 OnUnitActiveSec=10min
 AccuracySec=1min
 Persistent=true
-Unit=strata-pvr-scheduler.service
+Unit=mochizuki-scheduler.service
 
 [Install]
 WantedBy=timers.target

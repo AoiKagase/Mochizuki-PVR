@@ -1,9 +1,23 @@
 (function () {
-  var hiddenChannelsStorageKey = "strata-pvr.scheduleHiddenChannels";
-  var listFiltersStorageKey = "strata-pvr.listFilters";
-  var recordedPageSizeStorageKey = "strata-pvr.recordedPageSize";
-  var recordedViewModeStorageKey = "strata-pvr.recordedViewMode";
-  var scheduleZoomStorageKey = "strata-pvr.scheduleZoomLevel";
+	// Copy preferences before state initialization. Keep the source for rollback,
+	// and never overwrite settings already saved by Mochizuki PVR.
+	["scheduleHiddenChannels", "listFilters", "recordedPageSize", "recordedViewMode", "scheduleZoomLevel"].forEach(function (name) {
+		try {
+			var storage = window.localStorage;
+			var key = "mochizuki." + name;
+			if (storage && storage.getItem(key) === null) {
+				var value = storage.getItem("strata-pvr." + name);
+				if (value !== null) storage.setItem(key, value);
+			}
+		} catch (error) {
+			// Storage can be disabled or full; leave the original value intact.
+		}
+	});
+  var hiddenChannelsStorageKey = "mochizuki.scheduleHiddenChannels";
+  var listFiltersStorageKey = "mochizuki.listFilters";
+  var recordedPageSizeStorageKey = "mochizuki.recordedPageSize";
+  var recordedViewModeStorageKey = "mochizuki.recordedViewMode";
+  var scheduleZoomStorageKey = "mochizuki.scheduleZoomLevel";
   var scheduleWindowHoursByMode = {
     "day": 24,
     "three-days": 72,
@@ -57,7 +71,7 @@
   var channelLogoLoadsInFlight = 0;
   var channelLogoLoadScheduled = false;
   var channelLogoLoadConcurrency = 1;
-  var strataConfigFormDirty = false;
+  var mochizukiConfigFormDirty = false;
   var mp4VideoEncodersLoaded = false;
   var focusableControlSelector = "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])";
   var state = {
@@ -447,7 +461,7 @@
   }
 
   function requestError(path, response) {
-    if (response.headers.get("X-Strata-Error-Code") === "tuner-unavailable") {
+    if (response.headers.get("X-Mochizuki-Error-Code") === "tuner-unavailable") {
       return new Error("空きチューナーがないため録画を開始できません");
     }
     if (response.status === 401) {
@@ -605,7 +619,7 @@
     var message = { event: eventName, at: Date.now(), source: realtimeSourceID };
     if (typeof window.BroadcastChannel === "function") {
       try {
-        var channel = new window.BroadcastChannel("strata-pvr");
+        var channel = new window.BroadcastChannel("mochizuki");
         channel.postMessage(message);
         channel.close();
       } catch (error) {
@@ -614,7 +628,7 @@
     }
     try {
       if (window.localStorage) {
-        window.localStorage.setItem("strata-pvr:notify", JSON.stringify(message));
+        window.localStorage.setItem("mochizuki:notify", JSON.stringify(message));
       }
     } catch (error) {
       // localStorage can be unavailable in private or embedded contexts.
@@ -622,7 +636,7 @@
   }
 
   function subscribeRealtimeRefresh() {
-    var storageKey = "strata-pvr:notify";
+    var storageKey = "mochizuki:notify";
     var refreshEvents = {
       "notify-config": true,
       "notify-recorded": true,
@@ -640,7 +654,7 @@
     }
     if (typeof window.BroadcastChannel === "function") {
       try {
-        var channel = new window.BroadcastChannel("strata-pvr");
+        var channel = new window.BroadcastChannel("mochizuki");
         channel.onmessage = function (event) {
           handle(event.data);
         };
@@ -1811,7 +1825,7 @@
       "reserves": "reserveListQuery",
       "recorded": "recordedListQuery",
       "rules": "ruleListQuery",
-		"settings": "strataMirakurunURL"
+		"settings": "mochizukiMirakurunURL"
     };
     var control = byId(focusByView[view]);
     if (!control && view === "schedule") {
@@ -3497,7 +3511,7 @@
             setBusy("処理中");
             request("program/" + encodeURIComponent(program.id), "PUT").then(refresh).then(function () {
               if (onAir && !operatorAlive()) {
-                showError(new Error("オペレータが停止中です。録画を開始するには strata-pvr run operator を起動してください"));
+                showError(new Error("オペレータが停止中です。録画を開始するには mochizuki run operator を起動してください"));
               }
             }).catch(showError);
           }));
@@ -5378,19 +5392,19 @@
 
   function renderConfigForm() {
     var cfg = state.config || {};
-    var strataPanel = byId("strataConfigPanel");
-    if (strataPanel) {
-      strataPanel.hidden = cfg.schema !== "strata/config";
+    var mochizukiPanel = byId("mochizukiConfigPanel");
+    if (mochizukiPanel) {
+      mochizukiPanel.hidden = cfg.schema !== "mochizuki/config";
     }
-    if (strataConfigFormDirty) {
+    if (mochizukiConfigFormDirty) {
       return;
     }
-    if (cfg.schema === "strata/config") {
-      renderStrataConfigForm(cfg);
+    if (cfg.schema === "mochizuki/config") {
+      renderMochizukiConfigForm(cfg);
     }
   }
 
-  function renderStrataConfigForm(cfg) {
+  function renderMochizukiConfigForm(cfg) {
     var web = cfg.web || {};
     var authentication = web.authentication || {};
     var recording = cfg.recording || {};
@@ -5399,34 +5413,34 @@
     var previewCache = cfg.previewCache || {};
     var services = cfg.services || {};
     var advanced = cfg.advanced || {};
-    setControlValue("strataMirakurunURL", (cfg.mirakurun || {}).url);
-    setControlValue("strataListenAddress", web.listenAddress);
-    setControlValue("strataWebPort", web.port);
-    setControlValue("strataAuthEnabled", authentication.enabled);
-    setControlValue("strataRecordingDirectory", recording.directory);
-    setControlValue("strataFilenameFormat", recording.filenameFormat);
-    setControlValue("strataRecordingStartMargin", recording.startMargin === undefined ? 15 : recording.startMargin);
-    setControlValue("strataRecordingEndMargin", recording.endMargin === undefined ? 0 : recording.endMargin);
-    setControlValue("strataRecordingPriority", (cfg.mirakurun || {}).recordingPriority);
-    setControlValue("strataConflictedPriority", (cfg.mirakurun || {}).conflictedPriority);
-    setControlValue("strataLowSpaceThreshold", lowSpace.thresholdMB);
-    setControlValue("strataLowSpaceAction", lowSpace.action);
-	setControlValue("strataPostProcessTimeout", postProcess.timeoutSeconds === undefined ? 600 : postProcess.timeoutSeconds);
-	setControlValue("strataPostProcessMaxConcurrent", postProcess.maxConcurrentRuns === undefined ? 1 : postProcess.maxConcurrentRuns);
-	setControlValue("strataPreviewCacheMaxAge", previewCache.maxAgeDays);
-	setControlValue("strataPreviewCacheMaxSize", previewCache.maxSizeMB);
-    setControlValue("strataExcludedServices", services.excluded);
-    setControlValue("strataServiceOrder", services.order);
-    setControlValue("strataNormalizationForm", advanced.normalizationForm);
+    setControlValue("mochizukiMirakurunURL", (cfg.mirakurun || {}).url);
+    setControlValue("mochizukiListenAddress", web.listenAddress);
+    setControlValue("mochizukiWebPort", web.port);
+    setControlValue("mochizukiAuthEnabled", authentication.enabled);
+    setControlValue("mochizukiRecordingDirectory", recording.directory);
+    setControlValue("mochizukiFilenameFormat", recording.filenameFormat);
+    setControlValue("mochizukiRecordingStartMargin", recording.startMargin === undefined ? 15 : recording.startMargin);
+    setControlValue("mochizukiRecordingEndMargin", recording.endMargin === undefined ? 0 : recording.endMargin);
+    setControlValue("mochizukiRecordingPriority", (cfg.mirakurun || {}).recordingPriority);
+    setControlValue("mochizukiConflictedPriority", (cfg.mirakurun || {}).conflictedPriority);
+    setControlValue("mochizukiLowSpaceThreshold", lowSpace.thresholdMB);
+    setControlValue("mochizukiLowSpaceAction", lowSpace.action);
+	setControlValue("mochizukiPostProcessTimeout", postProcess.timeoutSeconds === undefined ? 600 : postProcess.timeoutSeconds);
+	setControlValue("mochizukiPostProcessMaxConcurrent", postProcess.maxConcurrentRuns === undefined ? 1 : postProcess.maxConcurrentRuns);
+	setControlValue("mochizukiPreviewCacheMaxAge", previewCache.maxAgeDays);
+	setControlValue("mochizukiPreviewCacheMaxSize", previewCache.maxSizeMB);
+    setControlValue("mochizukiExcludedServices", services.excluded);
+    setControlValue("mochizukiServiceOrder", services.order);
+    setControlValue("mochizukiNormalizationForm", advanced.normalizationForm);
 	loadMP4VideoEncoders();
 	renderMP4VideoEncoderOptions(advanced.mp4VideoEncoder);
 	renderPostProcessCommands(postProcess.commands || legacyPostProcessCommands(postProcess.command));
-    var root = byId("strataAuthUsers");
+    var root = byId("mochizukiAuthUsers");
     root.innerHTML = "";
     (authentication.users || []).forEach(function (user) {
-      appendStrataUser(user);
+      appendMochizukiUser(user);
     });
-    updateStrataAuthUsersState();
+    updateMochizukiAuthUsersState();
     renderAPITokens();
   }
 
@@ -5438,7 +5452,7 @@
   }
 
   function renderPostProcessCommands(commands) {
-    var root = byId("strataPostProcessCommands");
+    var root = byId("mochizukiPostProcessCommands");
     if (!root) {
       return;
     }
@@ -5449,7 +5463,7 @@
   }
 
   function appendPostProcessCommand(command) {
-    var root = byId("strataPostProcessCommands");
+    var root = byId("mochizukiPostProcessCommands");
     if (!root) {
       return;
     }
@@ -5466,7 +5480,7 @@
     removeCommand.className = "secondary-button danger-button";
     removeCommand.textContent = "コマンドを削除";
     removeCommand.addEventListener("click", function () {
-      strataConfigFormDirty = true;
+      mochizukiConfigFormDirty = true;
       section.remove();
       updatePostProcessCommandTitles();
     });
@@ -5475,7 +5489,7 @@
     var executableLabel = document.createElement("label");
     executableLabel.textContent = "コマンド";
     var input = document.createElement("input");
-    input.className = "config-form-control strata-post-process-executable";
+    input.className = "config-form-control mochizuki-post-process-executable";
     input.type = "text";
     input.autocomplete = "off";
     input.spellcheck = false;
@@ -5494,7 +5508,7 @@
     addArgument.className = "secondary-button";
     addArgument.textContent = "引数を追加";
     addArgument.addEventListener("click", function () {
-      strataConfigFormDirty = true;
+      mochizukiConfigFormDirty = true;
       var argumentInput = appendPostProcessArgument(argumentList, "");
       argumentInput.focus();
     });
@@ -5511,7 +5525,7 @@
     var row = document.createElement("div");
     row.className = "post-process-command-row";
     var input = document.createElement("input");
-    input.className = "config-form-control strata-post-process-argument";
+    input.className = "config-form-control mochizuki-post-process-argument";
     input.type = "text";
     input.autocomplete = "off";
     input.spellcheck = false;
@@ -5525,7 +5539,7 @@
     remove.setAttribute("aria-label", "引数を削除");
     remove.textContent = "×";
     remove.addEventListener("click", function () {
-      strataConfigFormDirty = true;
+      mochizukiConfigFormDirty = true;
       row.remove();
     });
     row.appendChild(input);
@@ -5535,7 +5549,7 @@
   }
 
   function updatePostProcessCommandTitles() {
-    Array.prototype.forEach.call(document.querySelectorAll("#strataPostProcessCommands .post-process-command-title"), function (title, index) {
+    Array.prototype.forEach.call(document.querySelectorAll("#mochizukiPostProcessCommands .post-process-command-title"), function (title, index) {
       title.textContent = "コマンド " + (index + 1);
     });
   }
@@ -5555,8 +5569,8 @@
   }
 
   function renderMP4VideoEncoderOptions(selected) {
-    var control = byId("strataMP4VideoEncoder");
-    if (!control || strataConfigFormDirty) {
+    var control = byId("mochizukiMP4VideoEncoder");
+    if (!control || mochizukiConfigFormDirty) {
       return;
     }
     var encoders = state.mp4VideoEncoders || [];
@@ -5580,38 +5594,38 @@
     control.value = found ? selected : encoders[0].name;
   }
 
-  function appendStrataUser(user) {
-    var root = byId("strataAuthUsers");
+  function appendMochizukiUser(user) {
+    var root = byId("mochizukiAuthUsers");
     if (!root) {
       return;
     }
     var row = document.createElement("div");
     row.className = "config-user-row";
-    row.innerHTML = '<label><span>ユーザー名</span><input class="config-form-control strata-user-name" type="text" autocomplete="username" required></label>' +
-      '<label><span>パスワード</span><input class="config-form-control strata-user-password" type="password" autocomplete="new-password" spellcheck="false"></label>' +
-      '<button class="icon-button danger-button strata-user-remove" type="button" title="ユーザーを削除" aria-label="ユーザーを削除">&times;</button>';
-    row.querySelector(".strata-user-name").value = user && user.username || "";
-    var password = row.querySelector(".strata-user-password");
+    row.innerHTML = '<label><span>ユーザー名</span><input class="config-form-control mochizuki-user-name" type="text" autocomplete="username" required></label>' +
+      '<label><span>パスワード</span><input class="config-form-control mochizuki-user-password" type="password" autocomplete="new-password" spellcheck="false"></label>' +
+      '<button class="icon-button danger-button mochizuki-user-remove" type="button" title="ユーザーを削除" aria-label="ユーザーを削除">&times;</button>';
+    row.querySelector(".mochizuki-user-name").value = user && user.username || "";
+    var password = row.querySelector(".mochizuki-user-password");
     if (user && user.passwordConfigured) {
       password.placeholder = "変更しない";
       row.dataset.passwordConfigured = "true";
     }
-    row.querySelector(".strata-user-remove").addEventListener("click", function () {
-      strataConfigFormDirty = true;
+    row.querySelector(".mochizuki-user-remove").addEventListener("click", function () {
+      mochizukiConfigFormDirty = true;
       row.remove();
     });
     root.appendChild(row);
   }
 
-  function updateStrataAuthUsersState() {
-    var enabled = byId("strataAuthEnabled").checked;
-    byId("strataAuthUsers").hidden = !enabled;
-    byId("addStrataUserButton").hidden = !enabled;
-    byId("strataAPITokensSection").hidden = !enabled;
+  function updateMochizukiAuthUsersState() {
+    var enabled = byId("mochizukiAuthEnabled").checked;
+    byId("mochizukiAuthUsers").hidden = !enabled;
+    byId("addMochizukiUserButton").hidden = !enabled;
+    byId("mochizukiAPITokensSection").hidden = !enabled;
   }
 
   function renderAPITokens() {
-    var root = byId("strataAPITokens");
+    var root = byId("mochizukiAPITokens");
     if (!root) {
       return;
     }
@@ -5645,7 +5659,7 @@
   }
 
   function createAPIToken() {
-    var input = byId("strataAPITokenName");
+    var input = byId("mochizukiAPITokenName");
     var name = input.value.trim();
     if (!name) {
       showError(new Error("APIトークン名を入力してください"));
@@ -5655,7 +5669,7 @@
     sendJSON("auth/tokens", "POST", { name: name }).then(function (token) {
       state.apiTokens = (state.apiTokens || []).concat([{ id: token.id, name: token.name, createdAt: token.createdAt }]);
       input.value = "";
-      var secret = byId("strataAPITokenSecret");
+      var secret = byId("mochizukiAPITokenSecret");
       secret.hidden = false;
       secret.textContent = "このトークンは一度だけ表示されます。安全な場所へ保存してください: " + token.token;
       renderAPITokens();
@@ -5672,7 +5686,7 @@
   }
 
   function clearConfigFieldErrors() {
-    var form = byId("strataConfigForm");
+    var form = byId("mochizukiConfigForm");
     if (!form) {
       return;
     }
@@ -5709,7 +5723,7 @@
   }
 
   function clearConfigValidationSummary() {
-    var summary = byId("strataConfigValidationSummary");
+    var summary = byId("mochizukiConfigValidationSummary");
     if (!summary) {
       return;
     }
@@ -5718,8 +5732,8 @@
   }
 
   function announceConfigValidationErrors() {
-    var form = byId("strataConfigForm");
-    var summary = byId("strataConfigValidationSummary");
+    var form = byId("mochizukiConfigForm");
+    var summary = byId("mochizukiConfigValidationSummary");
     if (!form || !summary) {
       return;
     }
@@ -5784,7 +5798,7 @@
     return value;
   }
 
-  function strataServiceList(id, label) {
+  function mochizukiServiceList(id, label) {
     var values = splitList(controlString(id)).map(Number);
     if (values.some(function (value) { return !Number.isInteger(value) || value <= 0; })) {
       var message = label + "はカンマ区切りの正の整数にしてください";
@@ -5796,30 +5810,30 @@
     return values;
   }
 
-  function readStrataConfigForm() {
+  function readMochizukiConfigForm() {
     clearConfigFieldErrors();
-    var mirakurunURL = requiredString("strataMirakurunURL", "Mirakurun URL");
-    var listenAddress = requiredString("strataListenAddress", "待受アドレス");
-    var port = requiredInteger("strataWebPort", "ポート", 1, 65535);
-    var directory = requiredString("strataRecordingDirectory", "録画保存先");
-    var filenameFormat = requiredString("strataFilenameFormat", "ファイル名形式");
-    var startMargin = requiredInteger("strataRecordingStartMargin", "録画開始マージン", -Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
-    var endMargin = requiredInteger("strataRecordingEndMargin", "録画終了マージン", -Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
-    var threshold = requiredInteger("strataLowSpaceThreshold", "空き容量しきい値", 0, Number.MAX_SAFE_INTEGER);
-	var postProcessTimeout = requiredInteger("strataPostProcessTimeout", "後処理タイムアウト", 0, Number.MAX_SAFE_INTEGER);
-	var postProcessMaxConcurrent = requiredInteger("strataPostProcessMaxConcurrent", "後処理の最大同時実行数", 0, Number.MAX_SAFE_INTEGER);
-	var previewMaxAge = requiredInteger("strataPreviewCacheMaxAge", "プレビュー保持日数", 0, Number.MAX_SAFE_INTEGER);
-	var previewMaxSize = requiredInteger("strataPreviewCacheMaxSize", "プレビュー上限", 0, Number.MAX_SAFE_INTEGER);
-    var excluded = strataServiceList("strataExcludedServices", "除外サービス");
-    var order = strataServiceList("strataServiceOrder", "サービス順");
+    var mirakurunURL = requiredString("mochizukiMirakurunURL", "Mirakurun URL");
+    var listenAddress = requiredString("mochizukiListenAddress", "待受アドレス");
+    var port = requiredInteger("mochizukiWebPort", "ポート", 1, 65535);
+    var directory = requiredString("mochizukiRecordingDirectory", "録画保存先");
+    var filenameFormat = requiredString("mochizukiFilenameFormat", "ファイル名形式");
+    var startMargin = requiredInteger("mochizukiRecordingStartMargin", "録画開始マージン", -Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+    var endMargin = requiredInteger("mochizukiRecordingEndMargin", "録画終了マージン", -Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+    var threshold = requiredInteger("mochizukiLowSpaceThreshold", "空き容量しきい値", 0, Number.MAX_SAFE_INTEGER);
+	var postProcessTimeout = requiredInteger("mochizukiPostProcessTimeout", "後処理タイムアウト", 0, Number.MAX_SAFE_INTEGER);
+	var postProcessMaxConcurrent = requiredInteger("mochizukiPostProcessMaxConcurrent", "後処理の最大同時実行数", 0, Number.MAX_SAFE_INTEGER);
+	var previewMaxAge = requiredInteger("mochizukiPreviewCacheMaxAge", "プレビュー保持日数", 0, Number.MAX_SAFE_INTEGER);
+	var previewMaxSize = requiredInteger("mochizukiPreviewCacheMaxSize", "プレビュー上限", 0, Number.MAX_SAFE_INTEGER);
+    var excluded = mochizukiServiceList("mochizukiExcludedServices", "除外サービス");
+    var order = mochizukiServiceList("mochizukiServiceOrder", "サービス順");
     if (mirakurunURL === null || listenAddress === null || port === null || directory === null || filenameFormat === null || startMargin === null || endMargin === null || threshold === null || postProcessTimeout === null || postProcessMaxConcurrent === null || previewMaxAge === null || previewMaxSize === null || excluded === null || order === null) {
       return null;
     }
 	var postProcessCommands = [];
 	var invalidPostProcessCommand = false;
-	Array.prototype.forEach.call(document.querySelectorAll("#strataPostProcessCommands .post-process-command"), function (row, index) {
-		var command = row.querySelector(".strata-post-process-executable").value.trim();
-		var arguments = Array.prototype.map.call(row.querySelectorAll(".strata-post-process-argument"), function (input) { return input.value.trim(); });
+	Array.prototype.forEach.call(document.querySelectorAll("#mochizukiPostProcessCommands .post-process-command"), function (row, index) {
+		var command = row.querySelector(".mochizuki-post-process-executable").value.trim();
+		var arguments = Array.prototype.map.call(row.querySelectorAll(".mochizuki-post-process-argument"), function (input) { return input.value.trim(); });
 		if (!command || arguments.some(function (argument) { return !argument; })) {
 			invalidPostProcessCommand = true;
 			return;
@@ -5830,12 +5844,12 @@
 		showError(new Error("録画後処理のコマンドと引数を入力するか、空の行を削除してください"));
 		return null;
 	}
-    var enabled = byId("strataAuthEnabled").checked;
+    var enabled = byId("mochizukiAuthEnabled").checked;
     var users = [];
     var names = {};
-    Array.prototype.forEach.call(document.querySelectorAll("#strataAuthUsers .config-user-row"), function (row) {
-      var username = row.querySelector(".strata-user-name").value.trim();
-      var password = row.querySelector(".strata-user-password").value;
+    Array.prototype.forEach.call(document.querySelectorAll("#mochizukiAuthUsers .config-user-row"), function (row) {
+      var username = row.querySelector(".mochizuki-user-name").value.trim();
+      var password = row.querySelector(".mochizuki-user-password").value;
       if (!username || names[username] || (!password && row.dataset.passwordConfigured !== "true")) {
         users = null;
         return;
@@ -5856,8 +5870,8 @@
     return {
       schema: cfg.schema,
       version: cfg.version,
-      mirakurun: { url: mirakurunURL, recordingPriority: Number(controlString("strataRecordingPriority")), conflictedPriority: Number(controlString("strataConflictedPriority")) },
-	  recording: { directory: directory, filenameFormat: filenameFormat, startMargin: startMargin, endMargin: endMargin, lowSpace: { thresholdMB: threshold, action: controlString("strataLowSpaceAction") }, postProcess: { commands: postProcessCommands, timeoutSeconds: postProcessTimeout, maxConcurrentRuns: postProcessMaxConcurrent } },
+      mirakurun: { url: mirakurunURL, recordingPriority: Number(controlString("mochizukiRecordingPriority")), conflictedPriority: Number(controlString("mochizukiConflictedPriority")) },
+	  recording: { directory: directory, filenameFormat: filenameFormat, startMargin: startMargin, endMargin: endMargin, lowSpace: { thresholdMB: threshold, action: controlString("mochizukiLowSpaceAction") }, postProcess: { commands: postProcessCommands, timeoutSeconds: postProcessTimeout, maxConcurrentRuns: postProcessMaxConcurrent } },
 	  previewCache: { maxAgeDays: previewMaxAge, maxSizeMB: previewMaxSize },
       web: {
         listenAddress: listenAddress,
@@ -5868,32 +5882,32 @@
       },
       wuiWebDir: cfg.wuiWebDir || "",
       services: { excluded: excluded, order: order },
-      advanced: { normalizationForm: controlString("strataNormalizationForm"), mp4VideoEncoder: controlString("strataMP4VideoEncoder") }
+      advanced: { normalizationForm: controlString("mochizukiNormalizationForm"), mp4VideoEncoder: controlString("mochizukiMP4VideoEncoder") }
     };
   }
 
-  function saveStrataConfigFromForm() {
-    var config = readStrataConfigForm();
+  function saveMochizukiConfigFromForm() {
+    var config = readMochizukiConfigForm();
     if (!config) {
       announceConfigValidationErrors();
       return;
     }
-    confirmAction("Strata設定を保存しますか？", { danger: false, okLabel: "保存", title: "設定保存の確認" }).then(function (confirmed) {
+    confirmAction("Mochizuki PVR 設定を保存しますか？", { danger: false, okLabel: "保存", title: "設定保存の確認" }).then(function (confirmed) {
       if (!confirmed) {
         return;
       }
       setBusy("設定保存中");
       sendConfigJSON(JSON.stringify(config)).then(function (savedConfig) {
         state.config = savedConfig || {};
-        strataConfigFormDirty = false;
+        mochizukiConfigFormDirty = false;
         render();
         setBusy("設定を保存しました");
       }).catch(showError);
     });
   }
 
-  function clearStrataPreviewCache() {
-    var button = byId("clearStrataPreviewCacheButton");
+  function clearMochizukiPreviewCache() {
+    var button = byId("clearMochizukiPreviewCacheButton");
     return confirmAction("保存済みのプレビューキャッシュをすべて削除しますか？", {
       danger: true,
       okLabel: "クリア",
@@ -5919,8 +5933,8 @@
     });
   }
 
-  function clearStrataLogoCache() {
-    var button = byId("clearStrataLogoCacheButton");
+  function clearMochizukiLogoCache() {
+    var button = byId("clearMochizukiLogoCacheButton");
     return confirmAction("保存済みの局ロゴキャッシュをすべて削除しますか？", {
       danger: true,
       okLabel: "クリア",
@@ -5968,15 +5982,15 @@
         }));
         root.appendChild(retryValue);
       }
-      var strataPanel = byId("strataConfigPanel");
-      if (strataPanel) {
-        strataPanel.hidden = true;
+      var mochizukiPanel = byId("mochizukiConfigPanel");
+      if (mochizukiPanel) {
+        mochizukiPanel.hidden = true;
       }
       return;
     }
     var cfg = state.config || {};
 	var rows = [
-      ["形式", "Strata config v" + cfg.version],
+      ["形式", "Mochizuki PVR config v" + cfg.version],
       ["Mirakurun", (cfg.mirakurun || {}).url],
       ["録画保存先", (cfg.recording || {}).directory],
       ["録画開始マージン", ((cfg.recording || {}).startMargin === undefined ? 15 : (cfg.recording || {}).startMargin) + " 秒"],
@@ -7512,53 +7526,53 @@
     if (forceSchedulerButton) {
       forceSchedulerButton.addEventListener("click", forceScheduler);
     }
-    var strataConfigForm = byId("strataConfigForm");
-    if (strataConfigForm) {
-      strataConfigForm.addEventListener("submit", function (event) {
+    var mochizukiConfigForm = byId("mochizukiConfigForm");
+    if (mochizukiConfigForm) {
+      mochizukiConfigForm.addEventListener("submit", function (event) {
         event.preventDefault();
       });
-      strataConfigForm.addEventListener("input", function () {
-        strataConfigFormDirty = true;
+      mochizukiConfigForm.addEventListener("input", function () {
+        mochizukiConfigFormDirty = true;
       });
-      strataConfigForm.addEventListener("change", function () {
-        strataConfigFormDirty = true;
+      mochizukiConfigForm.addEventListener("change", function () {
+        mochizukiConfigFormDirty = true;
       });
     }
-    var saveStrataConfigButton = byId("saveStrataConfigButton");
-    if (saveStrataConfigButton) {
-      saveStrataConfigButton.addEventListener("click", saveStrataConfigFromForm);
+    var saveMochizukiConfigButton = byId("saveMochizukiConfigButton");
+    if (saveMochizukiConfigButton) {
+      saveMochizukiConfigButton.addEventListener("click", saveMochizukiConfigFromForm);
     }
-    var clearStrataPreviewCacheButton = byId("clearStrataPreviewCacheButton");
-    if (clearStrataPreviewCacheButton) {
-      clearStrataPreviewCacheButton.addEventListener("click", clearStrataPreviewCache);
+    var clearMochizukiPreviewCacheButton = byId("clearMochizukiPreviewCacheButton");
+    if (clearMochizukiPreviewCacheButton) {
+      clearMochizukiPreviewCacheButton.addEventListener("click", clearMochizukiPreviewCache);
     }
-    var clearStrataLogoCacheButton = byId("clearStrataLogoCacheButton");
-    if (clearStrataLogoCacheButton) {
-      clearStrataLogoCacheButton.addEventListener("click", clearStrataLogoCache);
+    var clearMochizukiLogoCacheButton = byId("clearMochizukiLogoCacheButton");
+    if (clearMochizukiLogoCacheButton) {
+      clearMochizukiLogoCacheButton.addEventListener("click", clearMochizukiLogoCache);
     }
-    var strataAuthEnabled = byId("strataAuthEnabled");
-    if (strataAuthEnabled) {
-      strataAuthEnabled.addEventListener("change", updateStrataAuthUsersState);
+    var mochizukiAuthEnabled = byId("mochizukiAuthEnabled");
+    if (mochizukiAuthEnabled) {
+      mochizukiAuthEnabled.addEventListener("change", updateMochizukiAuthUsersState);
     }
-    var addStrataUserButton = byId("addStrataUserButton");
-    if (addStrataUserButton) {
-      addStrataUserButton.addEventListener("click", function () {
-        strataConfigFormDirty = true;
-        appendStrataUser({});
-        var names = byId("strataAuthUsers").querySelectorAll(".strata-user-name");
+    var addMochizukiUserButton = byId("addMochizukiUserButton");
+    if (addMochizukiUserButton) {
+      addMochizukiUserButton.addEventListener("click", function () {
+        mochizukiConfigFormDirty = true;
+        appendMochizukiUser({});
+        var names = byId("mochizukiAuthUsers").querySelectorAll(".mochizuki-user-name");
         names[names.length - 1].focus();
       });
     }
 	var addPostProcessCommandButton = byId("addPostProcessCommandButton");
 	if (addPostProcessCommandButton) {
 		addPostProcessCommandButton.addEventListener("click", function () {
-			strataConfigFormDirty = true;
+			mochizukiConfigFormDirty = true;
 			appendPostProcessCommand({ command: "", arguments: [] }).focus();
 		});
 	}
-    var createStrataAPITokenButton = byId("createStrataAPITokenButton");
-    if (createStrataAPITokenButton) {
-      createStrataAPITokenButton.addEventListener("click", createAPIToken);
+    var createMochizukiAPITokenButton = byId("createMochizukiAPITokenButton");
+    if (createMochizukiAPITokenButton) {
+      createMochizukiAPITokenButton.addEventListener("click", createAPIToken);
     }
     var logoutButton = byId("logoutButton");
     if (logoutButton) {

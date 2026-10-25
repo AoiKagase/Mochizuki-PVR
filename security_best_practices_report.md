@@ -1,7 +1,7 @@
 # セキュリティ・ベストプラクティス監査報告
 
 監査日: 2026-07-28  
-対象: Strata PVR（Go `net/http`、フレームワークなしの JavaScript）
+対象: Mochizuki PVR（Go `net/http`、フレームワークなしの JavaScript）
 
 ## エグゼクティブサマリー（完了）
 

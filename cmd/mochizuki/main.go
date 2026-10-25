@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"strata-pvr/internal/cli"
+	"mochizuki/internal/cli"
 )
 
 func main() {

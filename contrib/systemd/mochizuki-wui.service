@@ -1,0 +1,26 @@
+[Unit]
+Description=Mochizuki PVR Web UI
+Documentation=https://github.com/Chinachu/Chinachu
+After=network-online.target mochizuki-operator.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mochizuki
+ExecStart=/opt/mochizuki/mochizuki run wui
+Restart=on-failure
+RestartSec=5s
+KillSignal=SIGINT
+TimeoutStopSec=30s
+
+# Uncomment if you want systemd, rather than Mochizuki PVR config uid/gid, to set
+# the service account. Ensure /opt/mochizuki, data/, log/, and recorded files
+# are writable by this user.
+# User=mochizuki
+# Group=mochizuki
+
+NoNewPrivileges=false
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

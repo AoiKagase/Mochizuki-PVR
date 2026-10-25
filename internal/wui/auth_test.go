@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"testing"
 
-	"strata-pvr/internal/config"
+	"mochizuki/internal/config"
 )
 
 func TestRequestOriginTrustsForwardedHeadersOnlyWhenEnabled(t *testing.T) {

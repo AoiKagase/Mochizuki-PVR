@@ -12,13 +12,13 @@ web
 
 ## Product Purpose
 
-Strata PVR の WebUI は、番組表・予約・録画状況を一画面で見渡せる運用向けダッシュボードとして機能させる。
+Mochizuki PVR の WebUI は、番組表・予約・録画状況を一画面で見渡せる運用向けダッシュボードとして機能させる。
 番組表は日本のTV操作に近い時間軸×チャンネル行の形に寄せ、予約状態を即座に把握できることを優先する。
 
 ## Positioning
 
 Chinachu から移行しやすい、Go 製の必要最小限の PVR。既存データを引き継ぎやすくし、日常の録画運用で必要な機能を提供することを優先する。
-Node.js・npm を必要とする既存の PVR 環境から移行する受け皿として、Strata PVR 自体は Go で実装する。Chinachu の完全な互換や全機能の置き換えは目指さない。
+Node.js・npm を必要とする既存の PVR 環境から移行する受け皿として、Mochizuki PVR 自体は Go で実装する。Chinachu の完全な互換や全機能の置き換えは目指さない。
 
 ## Operating Context
 
@@ -37,7 +37,7 @@ Node.js・npm を必要とする既存の PVR 環境から移行する受け皿�
 
 ## Brand Commitments
 
-製品名は Strata PVR。UI は日本語を使用し、操作・状態・問題への対応を明快に伝える。
+製品名は Mochizuki PVR。UI は日本語を使用し、操作・状態・問題への対応を明快に伝える。
 既存の個性と避けたい方向は以下を維持する。
 
 ## Brand Personality

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	legacy "strata-pvr/internal/domain"
+	legacy "mochizuki/internal/domain"
 )
 
 type programSearchQuery struct {

@@ -1,4 +1,4 @@
-module strata-pvr
+module mochizuki
 
 go 1.26.6
 

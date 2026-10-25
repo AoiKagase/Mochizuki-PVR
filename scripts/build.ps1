@@ -1,8 +1,11 @@
 param(
-    [string]$Output = "strata-pvr.exe"
+    [string]$Output = "mochizuki.exe"
 )
 
 $ErrorActionPreference = "Stop"
+
+$goCommand = Get-Command go -ErrorAction SilentlyContinue
+$goExecutable = if ($goCommand) { $goCommand.Source } else { "C:\Program Files\Go\bin\go.exe" }
 $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 try {
@@ -15,12 +18,12 @@ try {
     }
 
     $date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    $ldflags = "-X strata-pvr/internal/version.Number=$version -X strata-pvr/internal/version.Commit=$commit -X strata-pvr/internal/version.Date=$date"
-    & go build -ldflags $ldflags -o $Output ./cmd/strata-pvr
+    $ldflags = "-X mochizuki/internal/version.Number=$version -X mochizuki/internal/version.Commit=$commit -X mochizuki/internal/version.Date=$date"
+    & $goExecutable build -ldflags $ldflags -o $Output ./cmd/mochizuki
     if ($LASTEXITCODE -ne 0) {
         throw "go build failed"
     }
-    Write-Host "Built Strata PVR $version -> $Output"
+    Write-Host "Built Mochizuki PVR $version -> $Output"
 }
 finally {
     Pop-Location

@@ -15,19 +15,19 @@ import (
 	"strings"
 	"time"
 
-	passwordauth "strata-pvr/internal/auth"
-	"strata-pvr/internal/config"
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/operator"
-	"strata-pvr/internal/operatorcontrol"
-	"strata-pvr/internal/programstore"
-	"strata-pvr/internal/reservationstore"
-	"strata-pvr/internal/rulestore"
-	"strata-pvr/internal/scheduler"
-	"strata-pvr/internal/schedulestore"
-	"strata-pvr/internal/storage"
-	"strata-pvr/internal/wui"
+	passwordauth "mochizuki/internal/auth"
+	"mochizuki/internal/config"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/operator"
+	"mochizuki/internal/operatorcontrol"
+	"mochizuki/internal/programstore"
+	"mochizuki/internal/reservationstore"
+	"mochizuki/internal/rulestore"
+	"mochizuki/internal/scheduler"
+	"mochizuki/internal/schedulestore"
+	"mochizuki/internal/storage"
+	"mochizuki/internal/wui"
 )
 
 type paths struct {
@@ -37,7 +37,7 @@ type paths struct {
 }
 
 var resolveRuntimePaths = runtimePaths
-var validateRuntimePaths = requireStrataRuntime
+var validateRuntimePaths = requireMochizukiRuntime
 var renameMigrationPath = os.Rename
 var copyMigrationInput = copyDirectory
 var inspectArchivedMigrationFiles = inspectMigrationFiles
@@ -46,7 +46,7 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	_ = ctx
 	p := resolveRuntimePaths()
 	if len(args) > 0 && args[0] == "init" {
-		return initializeStrata(ctx, stdout)
+		return initializeMochizuki(ctx, stdout)
 	}
 	if len(args) > 0 && args[0] == "migrate" {
 		return migrateChinachu(ctx, args[1:], stdout)
@@ -103,12 +103,12 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	}
 }
 
-func requireStrataRuntime(p paths) error {
+func requireMochizukiRuntime(p paths) error {
 	if _, err := config.Load(p.config); err != nil {
-		return fmt.Errorf("Strata runtime is not initialized; run strata-pvr init or migrate: %w", err)
+		return fmt.Errorf("Mochizuki runtime is not initialized; run mochizuki init or migrate: %w", err)
 	}
 	if _, err := os.Stat(p.database); err != nil {
-		return fmt.Errorf("Strata database is unavailable; run strata-pvr init or migrate: %w", err)
+		return fmt.Errorf("Mochizuki database is unavailable; run mochizuki init or migrate: %w", err)
 	}
 	return nil
 }
@@ -126,6 +126,8 @@ func isRuntimeCommand(args []string) bool {
 }
 
 func runtimePaths() paths {
+	// Keep the established database filename, including SQLite WAL/SHM sidecars,
+	// so upgrades never create an empty database beside existing recordings.
 	return paths{
 		config:          filepath.Join("data", "config.json"),
 		database:        filepath.Join("data", "strata.db"),
@@ -133,12 +135,12 @@ func runtimePaths() paths {
 	}
 }
 
-func initializeStrata(ctx context.Context, stdout io.Writer) error {
+func initializeMochizuki(ctx context.Context, stdout io.Writer) error {
 	configPath := filepath.Join("data", "config.json")
 	databasePath := filepath.Join("data", "strata.db")
 	for _, path := range []string{configPath, databasePath} {
 		if _, err := os.Stat(path); err == nil {
-			return fmt.Errorf("Strata data already exists: %s", path)
+			return fmt.Errorf("Mochizuki data already exists: %s", path)
 		} else if !os.IsNotExist(err) {
 			return err
 		}
@@ -171,16 +173,16 @@ func initializeStrata(ctx context.Context, stdout io.Writer) error {
 		return err
 	}
 	complete = true
-	fmt.Fprintln(stdout, "Initialized Strata PVR in data/.")
+	fmt.Fprintln(stdout, "Initialized Mochizuki PVR in data/.")
 	return nil
 }
 
 func migrateChinachu(ctx context.Context, args []string, stdout io.Writer) error {
 	if len(args) != 0 {
-		return fmt.Errorf("Usage: strata-pvr migrate")
+		return fmt.Errorf("Usage: mochizuki migrate")
 	}
 	if _, err := os.Stat("data"); err == nil {
-		return fmt.Errorf("Strata data already exists: data")
+		return fmt.Errorf("Mochizuki data already exists: data")
 	} else if !os.IsNotExist(err) {
 		return err
 	}
@@ -193,7 +195,7 @@ func migrateChinachu(ctx context.Context, args []string, stdout io.Writer) error
 	if err != nil {
 		return err
 	}
-	tempDir, err := os.MkdirTemp(".", ".strata-migrate-")
+	tempDir, err := os.MkdirTemp(".", ".mochizuki-migrate-")
 	if err != nil {
 		return err
 	}
@@ -325,10 +327,10 @@ func migrateChinachu(ctx context.Context, args []string, stdout io.Writer) error
 	}
 	if err := renameMigrationPath(tempDir, "data"); err != nil {
 		_ = os.RemoveAll(archivePath)
-		return fmt.Errorf("install Strata data: %w", err)
+		return fmt.Errorf("install Mochizuki data: %w", err)
 	}
 	manifest := map[string]any{
-		"schema": "strata/migration-report", "version": 3,
+		"schema": "mochizuki/migration-report", "version": 3,
 		"source": archivePath, "completedAt": time.Now().Format(time.RFC3339), "warnings": warnings,
 		"imported": counts, "sourceSha256": archivedHashes, "sourceSize": archivedSizes,
 	}
@@ -489,10 +491,10 @@ func convertLegacyConfig(old *config.LegacyConfig) (config.Document, []string, e
 			warnings = append(warnings, "legacy public WUI listener was changed to 127.0.0.1; configure an authenticated reverse proxy explicitly after migration if remote access is required")
 		}
 	} else {
-		warnings = append(warnings, "no legacy WUI listener was enabled; the default Strata listener was selected")
+		warnings = append(warnings, "no legacy WUI listener was enabled; the default Mochizuki listener was selected")
 	}
 	if old.WUIPort != nil && old.WUIOpenServer {
-		warnings = append(warnings, "legacy authenticated and public WUI listeners were merged; Strata uses the authenticated listener address and port")
+		warnings = append(warnings, "legacy authenticated and public WUI listeners were merged; Mochizuki uses the authenticated listener address and port")
 	}
 	for _, credential := range old.WUIUsers {
 		username, password, ok := strings.Cut(credential, ":")
@@ -508,7 +510,7 @@ func convertLegacyConfig(old *config.LegacyConfig) (config.Document, []string, e
 	return doc, warnings, nil
 }
 
-// Chinachu stores recording margins in milliseconds, while Strata stores them
+// Chinachu stores recording margins in milliseconds, while Mochizuki stores them
 // in seconds. Legacy values are expected to be whole seconds in milliseconds.
 func legacyMarginSeconds(milliseconds int) int {
 	return milliseconds / 1000
@@ -1411,11 +1413,11 @@ func dumpJSONFile(path, empty string, stdout io.Writer) error {
 
 func service(ctx context.Context, p paths, args []string, stdout io.Writer) error {
 	if len(args) != 2 {
-		return fmt.Errorf("Usage: strata-pvr service <name> <action>")
+		return fmt.Errorf("Usage: mochizuki service <name> <action>")
 	}
 	name, action := args[0], args[1]
 	if name != "operator" && name != "scheduler" && name != "wui" {
-		return fmt.Errorf("Usage: strata-pvr service <name> <action>")
+		return fmt.Errorf("Usage: mochizuki service <name> <action>")
 	}
 	switch action {
 	case "initscript":
@@ -1424,17 +1426,17 @@ func service(ctx context.Context, p paths, args []string, stdout io.Writer) erro
 	case "execute":
 		return runNamedComponent(ctx, p, name)
 	default:
-		return fmt.Errorf("Usage: strata-pvr service <name> <action>")
+		return fmt.Errorf("Usage: mochizuki service <name> <action>")
 	}
 }
 
 func runComponent(ctx context.Context, p paths, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("Usage: strata-pvr run <wui|operator|scheduler> [--web-dir <path>]")
+		return fmt.Errorf("Usage: mochizuki run <wui|operator|scheduler> [--web-dir <path>]")
 	}
 	if args[0] != "wui" {
 		if len(args) != 1 {
-			return fmt.Errorf("Usage: strata-pvr run <wui|operator|scheduler> [--web-dir <path>]")
+			return fmt.Errorf("Usage: mochizuki run <wui|operator|scheduler> [--web-dir <path>]")
 		}
 		return runNamedComponent(ctx, p, args[0])
 	}
@@ -1451,7 +1453,7 @@ func runNamedComponent(ctx context.Context, p paths, name string) error {
 
 func runNamedComponentWithWebDir(ctx context.Context, p paths, name, webDir string) error {
 	if name != "operator" && name != "scheduler" && name != "wui" {
-		return fmt.Errorf("Usage: strata-pvr run <wui|operator|scheduler>")
+		return fmt.Errorf("Usage: mochizuki run <wui|operator|scheduler>")
 	}
 	if err := prepareServiceRuntimeFor(p); err != nil {
 		return err
@@ -1484,7 +1486,7 @@ func runNamedComponentWithWebDir(ctx context.Context, p paths, name, webDir stri
 			OperatorControl: p.operatorControl,
 		})
 	default:
-		return fmt.Errorf("Usage: strata-pvr run <wui|operator|scheduler>")
+		return fmt.Errorf("Usage: mochizuki run <wui|operator|scheduler>")
 	}
 }
 
@@ -1498,12 +1500,12 @@ func parseWebDirFlag(args []string) (string, error) {
 	if len(args) == 1 && strings.HasPrefix(args[0], "--web-dir=") && strings.TrimPrefix(args[0], "--web-dir=") != "" {
 		return strings.TrimPrefix(args[0], "--web-dir="), nil
 	}
-	return "", fmt.Errorf("Usage: strata-pvr run wui [--web-dir <path>]")
+	return "", fmt.Errorf("Usage: mochizuki run wui [--web-dir <path>]")
 }
 
 func prepareServiceRuntimeFor(p paths) error {
 	if _, err := os.Stat(p.config); err != nil {
-		return fmt.Errorf("Strata is not initialized; run strata-pvr init or migrate: %w", err)
+		return fmt.Errorf("Mochizuki is not initialized; run mochizuki init or migrate: %w", err)
 	}
 	if err := os.MkdirAll("log", 0o755); err != nil {
 		return err
@@ -1512,33 +1514,33 @@ func prepareServiceRuntimeFor(p paths) error {
 }
 
 func serviceInitScript(name string) string {
-	strataDir, err := os.Getwd()
+	mochizukiDir, err := os.Getwd()
 	if err != nil {
-		strataDir = "."
+		mochizukiDir = "."
 	}
-	strataDir = filepath.ToSlash(strataDir)
+	mochizukiDir = filepath.ToSlash(mochizukiDir)
 	return fmt.Sprintf(`#!/bin/bash
 # /etc/
 
 ### BEGIN INIT INFO
-# Provides:          strata-pvr-%[1]s
+# Provides:          mochizuki-%[1]s
 # Required-Start:    $local_fs $remote_fs $network $syslog
 # Required-Stop:     $local_fs $remote_fs $network $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: starts the Strata PVR %[1]s
-# Description:       starts the Strata PVR %[1]s service (USER=$USER)
+# Short-Description: starts the Mochizuki PVR %[1]s
+# Description:       starts the Mochizuki PVR %[1]s service (USER=$USER)
 ### END INIT INFO
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-STRATA_PVR_DIR=%[2]s
-DAEMON=${STRATA_PVR_DIR}/strata-pvr
+MOCHIZUKI_PVR_DIR=%[2]s
+DAEMON=${MOCHIZUKI_PVR_DIR}/mochizuki
 DAEMON_OPTS="run %[1]s"
-NAME=strata-pvr-%[1]s
+NAME=mochizuki-%[1]s
 USER=$USER
-PIDFILE=/var/run/strata-pvr-%[1]s.pid
+PIDFILE=/var/run/mochizuki-%[1]s.pid
 
-cd $STRATA_PVR_DIR || exit 1
+cd $MOCHIZUKI_PVR_DIR || exit 1
 test -x $DAEMON || exit 0
 
 start () {
@@ -1609,7 +1611,7 @@ case "$1" in
 esac
 
 exit 0
-`, name, shellQuote(strataDir))
+`, name, shellQuote(mochizukiDir))
 }
 
 func shellQuote(s string) string {
@@ -1782,12 +1784,12 @@ func writePretty(w io.Writer, v any) {
 
 func printHelp(w io.Writer) {
 	fmt.Fprint(w, `
-Usage: strata-pvr <cmd> ...
+Usage: mochizuki <cmd> ...
 
 Commands:
 
-init                    Initialize a new Strata installation in data/.
-migrate                 Convert migrate/ Chinachu files into a Strata installation.
+init                    Initialize a new Mochizuki installation in data/.
+migrate                 Convert migrate/ Chinachu files into a Mochizuki installation.
 run <component>         Run wui, operator, or scheduler.
 service <name> <action> Legacy service utility (compatibility alias).
 

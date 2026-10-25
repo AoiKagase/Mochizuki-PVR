@@ -50,10 +50,10 @@ jobs:
         include:
           - goos: linux
             goarch: amd64
-            artifact: strata-pvr-linux-amd64
+            artifact: mochizuki-linux-amd64
           - goos: windows
             goarch: amd64
-            artifact: strata-pvr-windows-amd64.exe
+            artifact: mochizuki-windows-amd64.exe
 
     steps:
       - name: Check out source
@@ -82,7 +82,7 @@ jobs:
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
           echo "commit=${commit}" >> "${GITHUB_OUTPUT}"
           echo "date=${date}" >> "${GITHUB_OUTPUT}"
-          echo "Building Strata PVR ${version} (${commit})"
+          echo "Building Mochizuki PVR ${version} (${commit})"
 
       - name: Build binary
         env:
@@ -91,8 +91,8 @@ jobs:
         run: |
           mkdir -p dist
           go build -trimpath \
-            -ldflags "-X strata-pvr/internal/version.Number=${{ steps.version.outputs.version }} -X strata-pvr/internal/version.Commit=${{ steps.version.outputs.commit }} -X strata-pvr/internal/version.Date=${{ steps.version.outputs.date }}" \
-            -o "dist/${{ matrix.artifact }}" ./cmd/strata-pvr
+            -ldflags "-X mochizuki/internal/version.Number=${{ steps.version.outputs.version }} -X mochizuki/internal/version.Commit=${{ steps.version.outputs.commit }} -X mochizuki/internal/version.Date=${{ steps.version.outputs.date }}" \
+            -o "dist/${{ matrix.artifact }}" ./cmd/mochizuki
 
       - name: Write build summary
         run: |

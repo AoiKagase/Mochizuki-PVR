@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"strata-pvr/internal/logging"
-	"strata-pvr/internal/mirakurun"
-	"strata-pvr/internal/programstore"
+	"mochizuki/internal/logging"
+	"mochizuki/internal/mirakurun"
+	"mochizuki/internal/programstore"
 )
 
 type hlsPreset struct {
@@ -145,7 +145,7 @@ func (s *server) handleChannelHLS(w http.ResponseWriter, r *http.Request, channe
 		legacyHTTPError(w, r, http.StatusInternalServerError)
 		return
 	}
-	client.UserAgent = mirakurun.StrataUserAgent("wui")
+	client.UserAgent = mirakurun.MochizukiUserAgent("wui")
 	body, err := client.ServiceStream(context.Background(), serviceID, true)
 	if err != nil {
 		legacyHTTPError(w, r, http.StatusServiceUnavailable)
@@ -301,7 +301,7 @@ func (m *hlsSessionManager) getOrStartSource(source string, input io.ReadCloser,
 		return nil, errHLSSubjectCapacity
 	}
 	if m.root == "" {
-		root, err := os.MkdirTemp("", "strata-pvr-hls-")
+		root, err := os.MkdirTemp("", "mochizuki-hls-")
 		if err != nil {
 			return nil, err
 		}

@@ -1,6 +1,8 @@
-# Strata PVR
+# Mochizuki PVR
 
-Strata PVR は、Mirakurun を録画バックエンドとして利用する、Go 製の
+旧 Strata PVR から更新する場合は、[名称変更時の更新手順](docs/UPGRADING_MOCHIZUKI.md) を参照してください。既存の設定と `data/strata.db` を引き継げます。
+
+Mochizuki PVR は、Mirakurun を録画バックエンドとして利用する、Go 製の
 シンプルな PVR です。
 
 Chinachu を使ってきたユーザーが、これまでの操作感や設定の考え方を大きく
@@ -22,7 +24,7 @@ Chinachu の完全な後継や全機能互換を目指すものではありま�
 ## 必要なもの
 
 - Mirakurun / mirakc (未検証)
-- 配布済みバイナリを使う場合: 実行対象 OS 用の Strata PVR バイナリ
+- 配布済みバイナリを使う場合: 実行対象 OS 用の Mochizuki PVR バイナリ
 - 視聴やプレビューを使う場合: `ffmpeg` / `ffprobe`
 - ソースからビルドする場合: Go 1.26.6 以上（`go.mod` の指定）
 
@@ -51,10 +53,10 @@ Windows での稼働は推奨していませんが、ビルドして動作させ
   作業ディレクトリで次を実行します。
 
 ```sh
-./strata-pvr init
+./mochizuki init
 ```
 
-`init` は、Strata 用の設定と SQLite データベースを作成します。
+`init` は、Mochizuki PVR 用の設定と SQLite データベースを作成します。
 
 初期状態の WUI は `127.0.0.1` のみに待受します。ネットワークへ公開するには
 `web.listenAddress` を変更し、`web.authentication.enabled` と認証ユーザーを設定してください。
@@ -64,7 +66,7 @@ data/config.json
 data/strata.db
 ```
 
-Strata 環境では `data/strata.db` が番組表、予約、録画状態、録画履歴の正本
+Mochizuki PVR 環境では `data/strata.db` が番組表、予約、録画状態、録画履歴の正本
 です。録画ファイル本体は、設定した録画ディレクトリに保存されます。
 
 ### Chinachu から移行する場合
@@ -85,7 +87,7 @@ migrate/
 その後、移行を実行します。
 
 ```sh
-./strata-pvr migrate
+./mochizuki migrate
 ```
 
 `recordings.json` は `recording.json` の別名としても利用できます。移行に
@@ -105,9 +107,9 @@ migrate/
 初期化または移行を完了した作業ディレクトリで、必要なプロセスを起動します。
 
 ```sh
-./strata-pvr run scheduler
-./strata-pvr run operator
-./strata-pvr run wui
+./mochizuki run scheduler
+./mochizuki run operator
+./mochizuki run wui
 ```
 
 - `scheduler`: Mirakurun から番組表を取得し、予約を更新します
@@ -120,7 +122,7 @@ migrate/
 ## Web UI
 
 ```sh
-./strata-pvr run wui
+./mochizuki run wui
 ```
 
 Web UI では、次の操作を行えます。
@@ -168,18 +170,18 @@ HLS の画質は `1080p`、`720p`、`540p`（既定）、`360p` から選べま�
 よるキャッシュを使います。管理画面からロゴキャッシュを削除できます。
 
 開発時に埋め込み Web 資産の代わりに外部ディレクトリを使う場合は、設定の
-`wuiWebDir` または `./strata-pvr run wui --web-dir <path>` を指定します。
+`wuiWebDir` または `./mochizuki run wui --web-dir <path>` を指定します。
 
 ## CLI コマンド
 
 初期化・移行と各サービスの起動:
 
 ```sh
-./strata-pvr init
-./strata-pvr migrate
-./strata-pvr run wui [--web-dir <path>]
-./strata-pvr run operator
-./strata-pvr run scheduler
+./mochizuki init
+./mochizuki migrate
+./mochizuki run wui [--web-dir <path>]
+./mochizuki run operator
+./mochizuki run scheduler
 ```
 
 運用コマンドの主なものは次のとおりです。
@@ -206,7 +208,7 @@ HLS の画質は `1080p`、`720p`、`540p`（既定）、`360p` から選べま�
 
 | 項目 | 内容 |
 | --- | --- |
-| `schema`, `version` | 設定スキーマ (`strata/config`) とバージョン |
+| `schema`, `version` | 設定スキーマ (`mochizuki/config`) とバージョン |
 | `mirakurun.url` | Mirakurun の接続先 |
 | `mirakurun.recordingPriority`, `conflictedPriority` | 録画優先度 |
 | `recording.directory`, `filenameFormat` | 録画保存先とファイル名形式 |
@@ -245,7 +247,7 @@ HLS の画質は `1080p`、`720p`、`540p`（既定）、`360p` から選べま�
 
 `commands` が空または未指定の場合は実行しません。`timeoutSeconds` は各コマンドに適用され、0 の場合は 10 分です。`maxConcurrentRuns` が 0 の場合は同時に 1 件まで実行します。コマンドには録画ファイルの移動・削除権限を与えないことを推奨します。
 
-番組検索APIはStrata形式の拡張子なしルート `GET /api/search` です。`title`、
+番組検索APIはMochizuki PVR 形式の拡張子なしルート `GET /api/search` です。`title`、
 `description`（旧名 `desc`）、`category`（旧名 `cat`）、`type`、`programID`
 （旧名 `pgid`）、`channelID`（旧名 `chid`）、`startHour` / `endHour`
 （旧名 `start` / `end`）で検索できます。レスポンスは開始時刻順の番組JSON配列です。
@@ -256,12 +258,12 @@ systemd 用の unit ファイル例を `contrib/systemd/` に用意していま�
 `operator` と `wui` は常駐サービス、`scheduler` は timer から起動する
 one-shot サービスとして運用できます。詳しくは
 [contrib/systemd/README.md](contrib/systemd/README.md) を参照してください。
-Linux 用バイナリのビルド、`/opt/strata-pvr` への配置、unit のインストール、
+Linux 用バイナリのビルド、`/opt/mochizuki` への配置、unit のインストール、
 `systemctl enable --now` までの手順も同ガイドに記載しています。
 
 ## データとバックアップ
 
-- `data/config.json`: Strata の設定
+- `data/config.json`: Mochizuki PVR の設定
 - `data/strata.db`: 番組表、予約、録画状態、録画履歴の正本
 - 録画ファイル: 設定した録画ディレクトリ
 - `data/.cache/previews/`: 録画済みプレビューのキャッシュ
@@ -276,7 +278,7 @@ SQLite は WAL モードを使用するため、稼働中に `strata.db` だけ�
 ## ディレクトリ構成
 
 ```text
-cmd/strata-pvr/     バイナリのエントリポイント
+cmd/mochizuki/     バイナリのエントリポイント
 internal/config/    設定の読み込みと既定値
 internal/database/  SQLite ストレージ
 internal/legacy/    旧形式の型、ルール評価、録画ファイル名整形

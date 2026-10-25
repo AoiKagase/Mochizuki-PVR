@@ -22,16 +22,16 @@ import (
 	"testing"
 	"time"
 
-	passwordauth "strata-pvr/internal/auth"
-	"strata-pvr/internal/config"
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/operatorcontrol"
-	"strata-pvr/internal/programstore"
-	"strata-pvr/internal/reservationstore"
-	"strata-pvr/internal/rulestore"
-	"strata-pvr/internal/schedulestore"
-	"strata-pvr/internal/storage"
+	passwordauth "mochizuki/internal/auth"
+	"mochizuki/internal/config"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/operatorcontrol"
+	"mochizuki/internal/programstore"
+	"mochizuki/internal/reservationstore"
+	"mochizuki/internal/rulestore"
+	"mochizuki/internal/schedulestore"
+	"mochizuki/internal/storage"
 )
 
 func TestAPIReadsLegacyJSONState(t *testing.T) {
@@ -384,7 +384,7 @@ func TestStaticImageCacheHeadersMatchLegacyWUI(t *testing.T) {
 	if got := res.Header().Get("Cache-Control"); got != "no-cache" {
 		t.Fatalf("index Cache-Control = %q", got)
 	}
-	if got := res.Header().Get("Server"); got != "Strata PVR" {
+	if got := res.Header().Get("Server"); got != "Mochizuki PVR" {
 		t.Fatalf("Server = %q", got)
 	}
 	for key, want := range map[string]string{
@@ -758,7 +758,7 @@ func TestNativeDashboardCanClearChannelLogoCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		`id="clearStrataLogoCacheButton"`,
+		`id="clearMochizukiLogoCacheButton"`,
 		`局ロゴキャッシュ`,
 	} {
 		if !strings.Contains(string(index), want) {
@@ -767,10 +767,10 @@ func TestNativeDashboardCanClearChannelLogoCache(t *testing.T) {
 	}
 	for _, want := range []string{
 		`function channelLogoURL(channelID)`,
-		`function clearStrataLogoCache()`,
+		`function clearMochizukiLogoCache()`,
 		`request("logo-cache", "DELETE")`,
 		`state.logoCacheVersion = Date.now();`,
-		`clearStrataLogoCacheButton.addEventListener("click", clearStrataLogoCache);`,
+		`clearMochizukiLogoCacheButton.addEventListener("click", clearMochizukiLogoCache);`,
 	} {
 		if !strings.Contains(string(app), want) {
 			t.Fatalf("web/app.js missing channel logo cache behavior %q", want)
@@ -788,7 +788,7 @@ func TestNativeDashboardOnAirReserveShowsImmediateRecordingFeedback(t *testing.T
 		`function operatorAlive()`,
 		`function programOnAir(program)`,
 		`var label = onAir ? "録画開始" : "予約";`,
-		`オペレータが停止中です。録画を開始するには strata-pvr run operator を起動してください`,
+		`オペレータが停止中です。録画を開始するには mochizuki run operator を起動してください`,
 		`function updateOperationalStatus()`,
 		`var statusText = state.lastError ? state.lastError.message : (alive ? "オペレータ稼働中" : "オペレータ停止中");`,
 		`scheduleOperator.textContent = statusText;`,
@@ -1423,21 +1423,21 @@ func TestNativeDashboardConfirmDialog(t *testing.T) {
 	}
 }
 
-func TestNativeDashboardStrataConfigForm(t *testing.T) {
+func TestNativeDashboardMochizukiConfigForm(t *testing.T) {
 	files := map[string][]string{
 		filepath.Join("..", "..", "web", "index.html"): {
-			`id="strataConfigPanel"`,
-			`id="strataListenAddress"`,
-			`id="strataAuthEnabled"`,
-			`id="strataAuthUsers"`,
-			`id="strataRecordingStartMargin"`,
-			`id="strataRecordingEndMargin"`,
+			`id="mochizukiConfigPanel"`,
+			`id="mochizukiListenAddress"`,
+			`id="mochizukiAuthEnabled"`,
+			`id="mochizukiAuthUsers"`,
+			`id="mochizukiRecordingStartMargin"`,
+			`id="mochizukiRecordingEndMargin"`,
 		},
 		filepath.Join("..", "..", "web", "app.js"): {
-			`cfg.schema === "strata/config"`,
+			`cfg.schema === "mochizuki/config"`,
 			`body: raw`,
-			`function renderStrataConfigForm(cfg)`,
-			`function readStrataConfigForm()`,
+			`function renderMochizukiConfigForm(cfg)`,
+			`function readMochizukiConfigForm()`,
 			`trustForwardedHeaders: web.trustForwardedHeaders === true`,
 			`trustedProxies: Array.isArray(web.trustedProxies) ? web.trustedProxies.slice() : []`,
 			`wuiWebDir: cfg.wuiWebDir || ""`,
@@ -1516,9 +1516,9 @@ func TestNativeDashboardRealtimeNotifications(t *testing.T) {
 		`function publishMutation(path, method)`,
 		`function publishRealtime(eventName)`,
 		`function subscribeRealtimeRefresh()`,
-		`BroadcastChannel("strata-pvr")`,
+		`BroadcastChannel("mochizuki")`,
 		`realtimeChannel`,
-		`strata-pvr:notify`,
+		`mochizuki:notify`,
 		`notify-reserves`,
 		`notify-recording`,
 		`notify-recorded`,
@@ -1746,7 +1746,7 @@ func TestAPIReserveSkipAndDelete(t *testing.T) {
 	}
 }
 
-func TestAPIReserveAndRecordingMutationsUseStrataDatabase(t *testing.T) {
+func TestAPIReserveAndRecordingMutationsUseMochizukiDatabase(t *testing.T) {
 	dir := t.TempDir()
 	paths := testPaths(dir)
 	paths.Database = filepath.Join(dir, "data", "strata.db")
@@ -1941,7 +1941,7 @@ func TestAPIRulesMutation(t *testing.T) {
 	}
 }
 
-func TestAPIRulesUsesSQLiteForStrata(t *testing.T) {
+func TestAPIRulesUsesSQLiteForMochizuki(t *testing.T) {
 	dir := t.TempDir()
 	paths := testPaths(dir)
 	paths.Database = filepath.Join(dir, "strata.db")
@@ -2106,7 +2106,7 @@ func TestAPIProgramPutOnAirRejectsWhenNoTunerIsAvailable(t *testing.T) {
 	if res.Code != http.StatusConflict {
 		t.Fatalf("put status = %d body=%s", res.Code, res.Body.String())
 	}
-	if got := res.Header().Get(strataErrorCodeHeader); got != strataErrorTunerUnavailable {
+	if got := res.Header().Get(mochizukiErrorCodeHeader); got != mochizukiErrorTunerUnavailable {
 		t.Fatalf("error code = %q", got)
 	}
 	reserves, err := reservationstore.Read(context.Background(), paths.Database)
@@ -2381,7 +2381,7 @@ func TestAPIScheduleChannelRoutes(t *testing.T) {
 	}
 }
 
-func TestAPISearchUsesStrataRouteAndLegacyFilters(t *testing.T) {
+func TestAPISearchUsesMochizukiRouteAndLegacyFilters(t *testing.T) {
 	dir := t.TempDir()
 	paths := testPaths(dir)
 	now := time.Now()
@@ -5218,7 +5218,7 @@ func TestAPIStatusReadsPIDFiles(t *testing.T) {
 	if err := json.Unmarshal(res.Body.Bytes(), &status); err != nil {
 		t.Fatal(err)
 	}
-	if status.Application["name"] != "Strata PVR" || status.Application["version"] == "" || status.Application["commit"] == "" {
+	if status.Application["name"] != "Mochizuki PVR" || status.Application["version"] == "" || status.Application["commit"] == "" {
 		t.Fatalf("unexpected application version: %#v", status.Application)
 	}
 	if status.Operator["pid"].(float64) != float64(currentPID) || status.Operator["alive"] != true {
@@ -5405,7 +5405,7 @@ func TestDeleteRecordedProgramRestoresFileWhenDatabaseRemoveFails(t *testing.T) 
 	}
 }
 
-func TestStrataAuthConcurrentRequestsDoNotReturnTooManyRequests(t *testing.T) {
+func TestMochizukiAuthConcurrentRequestsDoNotReturnTooManyRequests(t *testing.T) {
 	hash, err := passwordauth.HashPassword("secret")
 	if err != nil {
 		t.Fatal(err)
@@ -5446,7 +5446,7 @@ func TestStrataAuthConcurrentRequestsDoNotReturnTooManyRequests(t *testing.T) {
 	}
 }
 
-func TestAPIStrataConfigRedactsPasswordHashAndRejectsInvalidPut(t *testing.T) {
+func TestAPIMochizukiConfigRedactsPasswordHashAndRejectsInvalidPut(t *testing.T) {
 	dir := t.TempDir()
 	paths := testPaths(dir)
 	doc := config.DefaultDocument()
@@ -5476,7 +5476,7 @@ func TestAPIStrataConfigRedactsPasswordHashAndRejectsInvalidPut(t *testing.T) {
 	}
 }
 
-func TestAPIStrataConfigPutHashesAndPreservesPasswords(t *testing.T) {
+func TestAPIMochizukiConfigPutHashesAndPreservesPasswords(t *testing.T) {
 	dir := t.TempDir()
 	paths := testPaths(dir)
 	existingHash, err := passwordauth.HashPassword("old-secret")
@@ -5490,7 +5490,7 @@ func TestAPIStrataConfigPutHashesAndPreservesPasswords(t *testing.T) {
 		t.Fatal(err)
 	}
 	handler := newTestHandler(t, paths, &config.Config{})
-	public, err := publicStrataConfig(mustReadFile(t, paths.Config))
+	public, err := publicMochizukiConfig(mustReadFile(t, paths.Config))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -5577,7 +5577,7 @@ func TestOpenServerHandlerSkipsAuth(t *testing.T) {
 	}
 }
 
-func TestStrataOpenListenerCanEnableAuthentication(t *testing.T) {
+func TestMochizukiOpenListenerCanEnableAuthentication(t *testing.T) {
 	dir := t.TempDir()
 	paths := testPaths(dir)
 	cfg := &config.Config{WUIHost: "127.0.0.1", WUIPort: 20772}

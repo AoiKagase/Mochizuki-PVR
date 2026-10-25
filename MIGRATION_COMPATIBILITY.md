@@ -1,17 +1,19 @@
 # Chinachu からの移行
 
-このドキュメントでは、Chinachu の作業ディレクトリから Strata PVR へ
+Strata PVR からの名称変更は [名称変更時の更新手順](docs/UPGRADING_MOCHIZUKI.md) を参照してください。この文書の `migrate` は Chinachu のデータ取込み用です。
+
+このドキュメントでは、Chinachu の作業ディレクトリから Mochizuki PVR へ
 移行するときの入力形式、変換範囲、安全性、互換性の考え方を説明します。
 
-Strata PVR は Node.js 版 Chinachu をそのまま置き換える互換ランタイムでは
+Mochizuki PVR は Node.js 版 Chinachu をそのまま置き換える互換ランタイムでは
 ありません。録画、予約、番組表、ルール管理に必要なデータを移行し、日常の
 操作感をできるだけ維持することを目的にしています。
 
 ## 移行後の実行環境
 
-- 新規環境では `strata-pvr init` を実行します
+- 新規環境では `mochizuki init` を実行します
 - Chinachu から移行する場合は、先に `migrate/` を用意して
-  `strata-pvr migrate` を実行します
+  `mochizuki migrate` を実行します
 - 実行時の設定は `data/config.json` です
 - 番組表、予約、録画中、録画済み、ルールの正本は `data/strata.db` です
 - 移行元のJSONファイルは `data/` に互換コピーとして残りません
@@ -44,20 +46,20 @@ migrate/
 ## 移行手順
 
 ```sh
-./strata-pvr migrate
+./mochizuki migrate
 ```
 
 移行コマンドは次の順で処理します。
 
 1. `migrate/` 内の設定とJSONを検証する
-2. 一時領域にStrata設定とデータベースを作成する
+2. 一時領域にMochizuki PVR 設定とデータベースを作成する
 3. ルール、予約、番組表、録画中、録画済みのデータをSQLiteへ取り込む
 4. 移行元を `backup/chinachu-<日時>/` へコピーする
 5. コピー後のファイルについて、移行開始時のSHA-256とバイト数を検証する
 6. 検証済みのデータを `data/` として配置する
 7. 移行レポートを `backup/chinachu-<日時>-report.json` に保存する
 
-移行レポートは `strata/migration-report` version 3 形式です。取り込み件数、
+移行レポートは `mochizuki/migration-report` version 3 形式です。取り込み件数、
 警告、移行元ファイルのSHA-256、バイト数、完了時刻を記録します。
 
 入力検証、バックアップ、ハッシュ検証、データ配置のいずれかに失敗した場合、
@@ -66,7 +68,7 @@ migrate/
 
 ## 設定の変換
 
-| Chinachu の設定 | Strata の設定 |
+| Chinachu の設定 | Mochizuki PVR の設定 |
 | --- | --- |
 | `mirakurunPath` / `schedulerMirakurunPath` | `mirakurun.url` |
 | `recordingPriority`、`conflictedPriority` | `mirakurun.*Priority` |
@@ -79,12 +81,12 @@ migrate/
 | 正規化形式 | `advanced.normalizationForm` |
 
 ルール、予約、番組表、録画中、録画済みのデータは、元のJSONドキュメントを
-読み込んだうえでSQLiteの各テーブルへ保存します。Strataの運用中はSQLiteを
+読み込んだうえでSQLiteの各テーブルへ保存します。Mochizuki PVR の運用中はSQLiteを
 正本として扱います。
 
 ## 移行されない設定
 
-次の設定は検出時に警告されますが、Strataの設定には取り込まれません。
+次の設定は検出時に警告されますが、Mochizuki PVR の設定には取り込まれません。
 
 - 組み込みTLSとクライアント証明書
 - `X-Forwarded-For` の信頼設定とGeoIPフィルタ
@@ -113,7 +115,7 @@ systemdやコンテナランタイムなどのサービス管理側で設定し�
 
 ## 切り戻し
 
-問題が見つかった場合は、Strataの scheduler、operator、WUI を停止します。
+問題が見つかった場合は、Mochizuki PVR の scheduler、operator、WUI を停止します。
 生成された `data/` を別の場所へ退避し、`backup/chinachu-<日時>/` の内容を
 `migrate/` へ戻してください。
 
@@ -122,12 +124,12 @@ systemdやコンテナランタイムなどのサービス管理側で設定し�
 されていないため、移動や削除は必要ありません。
 
 SQLiteはWALモードを使用します。稼働中に `strata.db` だけをコピーせず、
-Strata側の復旧では停止中に `data/` ディレクトリ全体をバックアップから戻して
+Mochizuki PVR 側の復旧では停止中に `data/` ディレクトリ全体をバックアップから戻して
 ください。
 
 ## 互換性の範囲
 
-Strataは、番組表、予約、録画、再生、クリーンアップ、ルール管理に必要な
+Mochizuki PVR は、番組表、予約、録画、再生、クリーンアップ、ルール管理に必要な
 Chinachu形式のデータと主要なWUI/APIを引き継ぎます。
 
 次の完全一致は移行要件に含みません。
@@ -136,4 +138,4 @@ Chinachu形式のデータと主要なWUI/APIを引き継ぎます。
 - JavaScript正規表現やdateformatの細かな境界挙動
 - 非公開・到達不能だった旧WUIページ
 - 旧来の右クリックメニュー、外部検索、Twitter操作
-- Socket.IOクライアントなど、Strataの運用に不要な旧連携
+- Socket.IOクライアントなど、Mochizuki PVR の運用に不要な旧連携

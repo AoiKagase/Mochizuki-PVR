@@ -14,15 +14,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"strata-pvr/internal/config"
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/logging"
-	"strata-pvr/internal/mirakurun"
-	"strata-pvr/internal/operatorcontrol"
-	"strata-pvr/internal/programstore"
-	"strata-pvr/internal/reservationstore"
-	"strata-pvr/internal/system"
+	"mochizuki/internal/config"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/logging"
+	"mochizuki/internal/mirakurun"
+	"mochizuki/internal/operatorcontrol"
+	"mochizuki/internal/programstore"
+	"mochizuki/internal/reservationstore"
+	"mochizuki/internal/system"
 )
 
 const recordStartMargin = 15 * time.Second
@@ -127,7 +127,7 @@ func Run(ctx context.Context, paths Paths, interval time.Duration) error {
 	if err != nil {
 		return err
 	}
-	client.UserAgent = mirakurun.StrataUserAgent("operator")
+	client.UserAgent = mirakurun.MochizukiUserAgent("operator")
 	if interval <= 0 {
 		interval = 5 * time.Second
 	}

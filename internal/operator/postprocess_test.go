@@ -7,23 +7,23 @@ import (
 	"testing"
 	"time"
 
-	"strata-pvr/internal/config"
-	legacy "strata-pvr/internal/domain"
+	"mochizuki/internal/config"
+	legacy "mochizuki/internal/domain"
 )
 
 func TestPostProcessHelper(t *testing.T) {
-	if os.Getenv("STRATA_POST_PROCESS_HELPER") != "1" {
+	if os.Getenv("MOCHIZUKI_POST_PROCESS_HELPER") != "1" {
 		return
 	}
 	data, _ := io.ReadAll(os.Stdin)
-	if marker := os.Getenv("STRATA_POST_PROCESS_MARKER"); marker != "" {
+	if marker := os.Getenv("MOCHIZUKI_POST_PROCESS_MARKER"); marker != "" {
 		f, err := os.OpenFile(marker, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 		if err == nil {
 			_, _ = f.WriteString(strings.Join(os.Args, " ") + "\n")
 			_ = f.Close()
 		}
 	}
-	if os.Getenv("STRATA_POST_PROCESS_FAIL") == "1" || (os.Getenv("STRATA_POST_PROCESS_FAIL_ARGUMENT") != "" && strings.Contains(strings.Join(os.Args, "\x00"), os.Getenv("STRATA_POST_PROCESS_FAIL_ARGUMENT"))) {
+	if os.Getenv("MOCHIZUKI_POST_PROCESS_FAIL") == "1" || (os.Getenv("MOCHIZUKI_POST_PROCESS_FAIL_ARGUMENT") != "" && strings.Contains(strings.Join(os.Args, "\x00"), os.Getenv("MOCHIZUKI_POST_PROCESS_FAIL_ARGUMENT"))) {
 		_, _ = os.Stderr.WriteString("intentional failure")
 		os.Exit(7)
 	}
@@ -32,8 +32,8 @@ func TestPostProcessHelper(t *testing.T) {
 }
 
 func TestRunPostProcessLogsExitCode(t *testing.T) {
-	t.Setenv("STRATA_POST_PROCESS_HELPER", "1")
-	t.Setenv("STRATA_POST_PROCESS_FAIL", "1")
+	t.Setenv("MOCHIZUKI_POST_PROCESS_HELPER", "1")
+	t.Setenv("MOCHIZUKI_POST_PROCESS_FAIL", "1")
 	logPath := t.TempDir() + "/operator.log"
 	cfg := &config.Config{PostProcessCommands: []config.PostProcessCommand{{Command: os.Args[0], Arguments: []string{"-test.run=TestPostProcessHelper", "--"}}}, PostProcessTimeout: time.Second}
 	runPostProcess(logPath, cfg, legacy.Program{ID: "failed"})
@@ -47,7 +47,7 @@ func TestRunPostProcessLogsExitCode(t *testing.T) {
 }
 
 func TestRunPostProcessPassesProgramJSONAndLogsResult(t *testing.T) {
-	t.Setenv("STRATA_POST_PROCESS_HELPER", "1")
+	t.Setenv("MOCHIZUKI_POST_PROCESS_HELPER", "1")
 	logPath := t.TempDir() + "/operator.log"
 	program := legacy.Program{ID: "abc", Title: "Example", Recorded: "/recorded/example.m2ts", Channel: legacy.Channel{Name: "NHK", Type: "GR", Channel: "27"}}
 	cfg := &config.Config{PostProcessCommands: []config.PostProcessCommand{{Command: os.Args[0], Arguments: []string{"-test.run=TestPostProcessHelper", "--", "{recordedPath}", "{title}"}}}, PostProcessTimeout: time.Second}
@@ -63,10 +63,10 @@ func TestRunPostProcessPassesProgramJSONAndLogsResult(t *testing.T) {
 }
 
 func TestRunPostProcessRunsCommandsInOrderAndStopsAfterFailure(t *testing.T) {
-	t.Setenv("STRATA_POST_PROCESS_HELPER", "1")
-	t.Setenv("STRATA_POST_PROCESS_FAIL_ARGUMENT", "second")
+	t.Setenv("MOCHIZUKI_POST_PROCESS_HELPER", "1")
+	t.Setenv("MOCHIZUKI_POST_PROCESS_FAIL_ARGUMENT", "second")
 	marker := t.TempDir() + "/commands.log"
-	t.Setenv("STRATA_POST_PROCESS_MARKER", marker)
+	t.Setenv("MOCHIZUKI_POST_PROCESS_MARKER", marker)
 	logPath := t.TempDir() + "/operator.log"
 	helper := func(argument string) config.PostProcessCommand {
 		return config.PostProcessCommand{Command: os.Args[0], Arguments: []string{"-test.run=TestPostProcessHelper", "--", argument}}

@@ -3,8 +3,8 @@ package scheduler
 import (
 	"testing"
 
-	"strata-pvr/internal/config"
-	"strata-pvr/internal/mirakurun"
+	"mochizuki/internal/config"
+	"mochizuki/internal/mirakurun"
 )
 
 func TestBuildScheduleFiltersAndOrders(t *testing.T) {

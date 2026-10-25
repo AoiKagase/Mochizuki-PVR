@@ -11,16 +11,16 @@ import (
 	"strings"
 	"time"
 
-	"strata-pvr/internal/config"
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
-	"strata-pvr/internal/logging"
-	"strata-pvr/internal/mirakurun"
-	"strata-pvr/internal/programstore"
-	"strata-pvr/internal/reservationstore"
-	"strata-pvr/internal/rulestore"
-	"strata-pvr/internal/schedulestore"
-	"strata-pvr/internal/system"
+	"mochizuki/internal/config"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
+	"mochizuki/internal/logging"
+	"mochizuki/internal/mirakurun"
+	"mochizuki/internal/programstore"
+	"mochizuki/internal/reservationstore"
+	"mochizuki/internal/rulestore"
+	"mochizuki/internal/schedulestore"
+	"mochizuki/internal/system"
 )
 
 type Source interface {
@@ -65,7 +65,7 @@ func Run(ctx context.Context, paths Paths, simulation bool) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	client.UserAgent = mirakurun.StrataUserAgent("scheduler")
+	client.UserAgent = mirakurun.MochizukiUserAgent("scheduler")
 	if paths.Database != "" {
 		db, err := database.Open(ctx, paths.Database)
 		if err != nil {

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	legacy "strata-pvr/internal/domain"
+	legacy "mochizuki/internal/domain"
 )
 
 func ReadRules(ctx context.Context, db *sql.DB) ([]json.RawMessage, error) {

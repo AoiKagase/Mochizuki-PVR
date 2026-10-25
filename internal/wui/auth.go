@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	passwordauth "strata-pvr/internal/auth"
-	"strata-pvr/internal/config"
+	passwordauth "mochizuki/internal/auth"
+	"mochizuki/internal/config"
 )
 
-const sessionCookieName = "strata_session"
+const sessionCookieName = "mochizuki_session"
 const sessionDuration = 8 * time.Hour
 const loginAttemptWindow = time.Minute
 const maxLoginAttempts = 5

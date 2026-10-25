@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"strata-pvr/internal/database"
-	legacy "strata-pvr/internal/domain"
+	"mochizuki/internal/database"
+	legacy "mochizuki/internal/domain"
 )
 
 const (
@@ -20,6 +20,7 @@ const (
 	Recorded  = "recorded"
 )
 
+// Persisted in existing recordings; changing it would lose recovery state.
 const completionMarker = "_strataFinalizing"
 
 var completionClaimSequence uint64
