@@ -1,0 +1,20 @@
+?   	mochizuki/cmd/mochizuki	[no test files]
+ok  	mochizuki/internal/auth	(cached)
+ok  	mochizuki/internal/cli	(cached)
+ok  	mochizuki/internal/config	(cached)
+ok  	mochizuki/internal/database	(cached)
+ok  	mochizuki/internal/domain	(cached)
+ok  	mochizuki/internal/logging	(cached)
+ok  	mochizuki/internal/mirakurun	(cached)
+ok  	mochizuki/internal/operator	(cached)
+ok  	mochizuki/internal/operatorcontrol	(cached)
+ok  	mochizuki/internal/programstore	(cached)
+ok  	mochizuki/internal/reservationstore	(cached)
+ok  	mochizuki/internal/rulestore	(cached)
+ok  	mochizuki/internal/scheduler	(cached)
+ok  	mochizuki/internal/schedulestore	(cached)
+ok  	mochizuki/internal/storage	(cached)
+ok  	mochizuki/internal/system	(cached)
+ok  	mochizuki/internal/version	(cached)
+ok  	mochizuki/internal/wui	19.173s
+?   	mochizuki/web	[no test files]

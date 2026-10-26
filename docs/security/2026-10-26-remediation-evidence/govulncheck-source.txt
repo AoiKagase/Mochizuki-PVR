@@ -1,0 +1,75 @@
+Fetching vulnerabilities from the database...
+
+Checking the code against the vulnerabilities...
+
+The package pattern matched the following 20 root packages:
+  mochizuki/internal/auth
+  mochizuki/internal/config
+  mochizuki/internal/domain
+  mochizuki/internal/database
+  mochizuki/internal/logging
+  mochizuki/internal/mirakurun
+  mochizuki/internal/operatorcontrol
+  mochizuki/internal/programstore
+  mochizuki/internal/reservationstore
+  mochizuki/internal/system
+  mochizuki/internal/operator
+  mochizuki/internal/rulestore
+  mochizuki/internal/schedulestore
+  mochizuki/internal/scheduler
+  mochizuki/internal/storage
+  mochizuki/internal/version
+  mochizuki/web
+  mochizuki/internal/wui
+  mochizuki/internal/cli
+  mochizuki/cmd/mochizuki
+Govulncheck scanned the following 12 modules and the go1.27.3 standard library:
+  mochizuki
+  github.com/dustin/go-humanize@v1.0.1
+  github.com/mattn/go-isatty@v0.0.24
+  github.com/ncruces/go-strftime@v1.0.0
+  github.com/remyoudompheng/bigfft@v0.0.0-20230129092748-24d4a6f8daec
+  golang.org/x/crypto@v0.55.0
+  golang.org/x/sys@v0.47.0
+  golang.org/x/text@v0.41.0
+  modernc.org/libc@v1.75.4
+  modernc.org/mathutil@v1.7.1
+  modernc.org/memory@v1.12.1
+  modernc.org/sqlite@v1.57.0
+
+=== Symbol Results ===
+
+No vulnerabilities found.
+
+=== Package Results ===
+
+No other vulnerabilities found.
+
+=== Module Results ===
+
+Vulnerability #1: GO-2026-6355
+    Prevent DoS on deadlocked established channel in golang.org/x/crypto/ssh
+  More info: https://pkg.go.dev/vuln/GO-2026-6355
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.55.0
+    Fixed in: golang.org/x/crypto@v0.56.0
+
+Vulnerability #2: GO-2026-6354
+    Prevent DoS on deadlocked undecided channel in golang.org/x/crypto/ssh
+  More info: https://pkg.go.dev/vuln/GO-2026-6354
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.55.0
+    Fixed in: golang.org/x/crypto@v0.56.0
+
+Vulnerability #3: GO-2026-5932
+    The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design,
+    and has known security issues
+  More info: https://pkg.go.dev/vuln/GO-2026-5932
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.55.0
+    Fixed in: N/A
+
+Your code is affected by 0 vulnerabilities.
+This scan also found 0 vulnerabilities in packages you import and 3
+vulnerabilities in modules you require, but your code doesn't appear to call
+these vulnerabilities.

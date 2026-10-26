@@ -1,0 +1,9 @@
+--- FAIL: TestLoginAttemptsDiscardExpiredUsernames (0.00s)
+    login_limits_test.go:23: retained username records = 1001, want 1
+--- FAIL: TestLoginAttemptsLimitSourceAcrossUsernames (0.00s)
+    login_limits_test.go:37: 31st source attempt accepted after changing username
+--- FAIL: TestLoginAttemptsBoundTotalRecords (0.00s)
+    login_limits_test.go:54: new identity accepted with full record capacity
+FAIL
+FAIL	mochizuki/internal/wui	2.247s
+FAIL

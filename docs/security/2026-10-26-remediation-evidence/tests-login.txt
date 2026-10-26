@@ -1,0 +1,20 @@
+=== RUN   TestLoginAttemptsDiscardExpiredUsernames
+--- PASS: TestLoginAttemptsDiscardExpiredUsernames (0.02s)
+=== RUN   TestLoginAttemptsLimitSourceAcrossUsernames
+--- PASS: TestLoginAttemptsLimitSourceAcrossUsernames (0.00s)
+=== RUN   TestLoginAttemptsBoundTotalRecords
+--- PASS: TestLoginAttemptsBoundTotalRecords (0.07s)
+=== RUN   TestLoginAttemptsWindowBoundaryAndRejectedAttempts
+--- PASS: TestLoginAttemptsWindowBoundaryAndRejectedAttempts (0.00s)
+=== RUN   TestLoginAttemptsSuccessOnlyResetsUsername
+--- PASS: TestLoginAttemptsSuccessOnlyResetsUsername (0.00s)
+=== RUN   TestLoginAttemptsConcurrentLimits
+=== RUN   TestLoginAttemptsConcurrentLimits/sources-1
+=== RUN   TestLoginAttemptsConcurrentLimits/sources-256
+--- PASS: TestLoginAttemptsConcurrentLimits (0.62s)
+    --- PASS: TestLoginAttemptsConcurrentLimits/sources-1 (0.00s)
+    --- PASS: TestLoginAttemptsConcurrentLimits/sources-256 (0.62s)
+=== RUN   TestLoginAttemptsHTTPReturnsRetryAfter
+--- PASS: TestLoginAttemptsHTTPReturnsRetryAfter (1.88s)
+PASS
+ok  	mochizuki/internal/wui	4.277s

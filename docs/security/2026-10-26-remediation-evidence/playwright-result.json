@@ -1,0 +1,8 @@
+{
+  "loginStatus": 204,
+  "authenticatedStatus": 200,
+  "changedUsernameFailures": 29,
+  "rateLimitStatus": 429,
+  "retryAfter": "60",
+  "browserErrors": []
+}

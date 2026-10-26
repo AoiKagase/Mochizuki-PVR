@@ -1,0 +1,5 @@
+=== RUN   TestLoginSecurityBrowser
+    login_limits_test.go:206: Playwright: {"loginStatus":204,"authenticatedStatus":200,"changedUsernameFailures":29,"rateLimitStatus":429,"retryAfter":"60","browserErrors":[],"output":"C:\\Temp\\strata-security-browser-20261026"}
+--- PASS: TestLoginSecurityBrowser (3.99s)
+PASS
+ok  	mochizuki/internal/wui	5.729s

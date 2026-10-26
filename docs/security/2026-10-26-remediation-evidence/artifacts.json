@@ -1,0 +1,20 @@
+[
+    {
+        "file":  "C:\\Temp\\strata-security-build-20261026\\mochizuki-windows-amd64.exe",
+        "bytes":  20590592,
+        "sha256":  "b3240b24d7730144c55da38f51c4386aab11f430cb9d50d8d0cb87b78c510dba",
+        "go":  "go1.27.3",
+        "sourceCommit":  "4949529894dde2c23e8ce8a294b0fb76b765ed5e",
+        "dirtyReason":  "Preserved pre-existing .gitignore modification",
+        "cgoEnabled":  false
+    },
+    {
+        "file":  "C:\\Temp\\strata-security-build-20261026\\mochizuki-linux-amd64",
+        "bytes":  20157792,
+        "sha256":  "224df3fb3a038131504855f919a474ab661e467cfbe4298d9a3cd2d928598e61",
+        "go":  "go1.27.3",
+        "sourceCommit":  "4949529894dde2c23e8ce8a294b0fb76b765ed5e",
+        "dirtyReason":  "Preserved pre-existing .gitignore modification",
+        "cgoEnabled":  false
+    }
+]
