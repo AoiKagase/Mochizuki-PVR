@@ -21,6 +21,8 @@ const sessionCookieName = "mochizuki_session"
 const sessionDuration = 8 * time.Hour
 const loginAttemptWindow = time.Minute
 const maxLoginAttempts = 5
+const maxSourceLoginAttempts = 30
+const maxLoginAttemptEntries = 4096
 
 type loginAttempt struct {
 	count int
@@ -251,29 +253,58 @@ func (s *server) verifyLogin(username, password string, r *http.Request) bool {
 }
 
 func (s *server) allowLoginAttempt(r *http.Request, username string) bool {
-	key := s.remoteAddress(r) + "\x00" + username
-	now := time.Now()
+	return s.allowLoginAttemptAt(r, username, time.Now())
+}
+
+func (s *server) allowLoginAttemptAt(r *http.Request, username string, now time.Time) bool {
+	source := s.remoteAddress(r)
+	key := sha256.Sum256([]byte(source + "\x00" + username))
 	s.authMu.Lock()
 	defer s.authMu.Unlock()
-	if s.loginAttempts == nil {
-		s.loginAttempts = make(map[string]loginAttempt)
+	for key, attempt := range s.loginAttempts {
+		if !now.Before(attempt.since.Add(loginAttemptWindow)) {
+			delete(s.loginAttempts, key)
+		}
 	}
-	attempt := s.loginAttempts[key]
-	if now.Sub(attempt.since) >= loginAttemptWindow {
-		attempt = loginAttempt{since: now}
+	for source, attempt := range s.loginSourceAttempts {
+		if !now.Before(attempt.since.Add(loginAttemptWindow)) {
+			delete(s.loginSourceAttempts, source)
+		}
 	}
-	if attempt.count >= maxLoginAttempts {
+	attempt, knownUser := s.loginAttempts[key]
+	sourceAttempt, knownSource := s.loginSourceAttempts[source]
+	if attempt.count >= maxLoginAttempts || sourceAttempt.count >= maxSourceLoginAttempts {
 		return false
 	}
+	entries := len(s.loginAttempts) + len(s.loginSourceAttempts)
+	if !knownUser {
+		entries++
+		attempt.since = now
+	}
+	if !knownSource {
+		entries++
+		sourceAttempt.since = now
+	}
+	if entries > maxLoginAttemptEntries {
+		return false
+	}
+	if s.loginAttempts == nil {
+		s.loginAttempts = make(map[[32]byte]loginAttempt)
+	}
+	if s.loginSourceAttempts == nil {
+		s.loginSourceAttempts = make(map[string]loginAttempt)
+	}
 	attempt.count++
+	sourceAttempt.count++
 	s.loginAttempts[key] = attempt
+	s.loginSourceAttempts[source] = sourceAttempt
 	return true
 }
 
 func (s *server) clearLoginAttempts(r *http.Request, username string) {
 	s.authMu.Lock()
 	defer s.authMu.Unlock()
-	delete(s.loginAttempts, s.remoteAddress(r)+"\x00"+username)
+	delete(s.loginAttempts, sha256.Sum256([]byte(s.remoteAddress(r)+"\x00"+username)))
 }
 
 func (s *server) requestUsesHTTPS(r *http.Request) bool {

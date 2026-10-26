@@ -203,7 +203,7 @@ func newServerWithAssets(paths Paths, cfg *config.Config, auth bool, assets asse
 	mux := http.NewServeMux()
 	server := &server{
 		paths: paths, cfg: cfg, db: paths.databaseHandle, assets: assets.files, assetLog: assets.log, assetErr: assetErr, metrics: newMetricHistory(), recordedSize: newRecordedSizeCache(), recordingPreviews: newRecordingPreviewCache(), mediaProbes: newMediaProbeCache(), liveSubtitles: newLiveSubtitleManager(), liveMSE: newLiveMSESessionManager(), playbackRequests: newPlaybackRequestSessions(), ffmpegSlots: make(chan struct{}, maxConcurrentFFmpeg), mediaStreams: make(chan struct{}, maxConcurrentMediaStreams),
-		sessions: make(map[string]authSession), playbackTickets: make(map[string]playbackTicket), loginAttempts: make(map[string]loginAttempt), authWorkers: make(chan struct{}, 2),
+		sessions: make(map[string]authSession), playbackTickets: make(map[string]playbackTicket), loginAttempts: make(map[[32]byte]loginAttempt), loginSourceAttempts: make(map[string]loginAttempt), authWorkers: make(chan struct{}, 2),
 		schedulerGate:    newSchedulerGate(),
 		schedulerWaiters: make(chan struct{}, maxPendingSchedulerRuns),
 		hls:              newHLSSessionManager(paths),
@@ -233,37 +233,38 @@ func newServerWithAssets(paths Paths, cfg *config.Config, auth bool, assets asse
 }
 
 type server struct {
-	paths              Paths
-	cfg                *config.Config
-	db                 *sql.DB
-	assets             fs.FS
-	assetLog           string
-	assetErr           error
-	metrics            *metricHistory
-	recordedSize       *recordedSizeCache
-	recordingPreviews  *recordingPreviewCache
-	mediaProbes        *mediaProbeCache
-	liveSubtitles      *liveSubtitleManager
-	liveMSE            *liveMSESessionManager
-	playbackRequests   *playbackRequestSessions
-	ffmpegSlots        chan struct{}
-	ffmpegMu           sync.Mutex
-	ffmpegSubjects     map[string]int
-	mediaStreams       chan struct{}
-	metricsOnce        sync.Once
-	configMu           sync.Mutex
-	schedulerMu        sync.Mutex
-	schedulerGate      chan struct{}
-	schedulerWaiters   chan struct{}
-	authMu             sync.Mutex
-	playbackTickets    map[string]playbackTicket
-	sessions           map[string]authSession
-	loginAttempts      map[string]loginAttempt
-	authWorkers        chan struct{}
-	hls                *hlsSessionManager
-	captionDecoderOnce sync.Once
-	captionDecoder     string
-	captionDecoderErr  error
+	paths               Paths
+	cfg                 *config.Config
+	db                  *sql.DB
+	assets              fs.FS
+	assetLog            string
+	assetErr            error
+	metrics             *metricHistory
+	recordedSize        *recordedSizeCache
+	recordingPreviews   *recordingPreviewCache
+	mediaProbes         *mediaProbeCache
+	liveSubtitles       *liveSubtitleManager
+	liveMSE             *liveMSESessionManager
+	playbackRequests    *playbackRequestSessions
+	ffmpegSlots         chan struct{}
+	ffmpegMu            sync.Mutex
+	ffmpegSubjects      map[string]int
+	mediaStreams        chan struct{}
+	metricsOnce         sync.Once
+	configMu            sync.Mutex
+	schedulerMu         sync.Mutex
+	schedulerGate       chan struct{}
+	schedulerWaiters    chan struct{}
+	authMu              sync.Mutex
+	playbackTickets     map[string]playbackTicket
+	sessions            map[string]authSession
+	loginAttempts       map[[32]byte]loginAttempt
+	loginSourceAttempts map[string]loginAttempt
+	authWorkers         chan struct{}
+	hls                 *hlsSessionManager
+	captionDecoderOnce  sync.Once
+	captionDecoder      string
+	captionDecoderErr   error
 }
 
 func newSchedulerGate() chan struct{} {
