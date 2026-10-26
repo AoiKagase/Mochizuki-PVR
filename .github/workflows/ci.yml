@@ -12,7 +12,7 @@ permissions:
 
 env:
   # Pin the patched toolchain so CI cannot select a vulnerable Go release.
-  GO_VERSION: "1.26.6"
+  GO_VERSION: "1.27.3"
   TZ: Asia/Tokyo
 
 jobs:
@@ -37,8 +37,11 @@ jobs:
       - name: Run tests
         run: go test ./...
 
+      - name: Check authentication races
+        run: go test -race ./internal/wui -run '^TestLoginAttempts' -count=1
+
       - name: Scan known vulnerabilities
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
   build:
     name: Build ${{ matrix.goos }}-${{ matrix.goarch }}

@@ -28,7 +28,7 @@ Chinachu の完全な後継や全機能互換を目指すものではありま�
 - Mirakurun / mirakc (未検証)
 - 配布済みバイナリを使う場合: 実行対象 OS 用の Mochizuki PVR バイナリ
 - 視聴やプレビューを使う場合: `ffmpeg` / `ffprobe`
-- ソースからビルドする場合: Go 1.26.6 以上（`go.mod` の指定）
+- ソースからビルドする場合: Go 1.27.3 以上（`go.mod` の指定）
 
 ## ビルド
 
@@ -160,6 +160,11 @@ reverse proxy の IP または CIDR を設定する必要があります。非�
 `trustedProxies` に入れたり、TLS なしで WUI をインターネットへ直接公開したり
 しないでください。API はログインセッションのほか、設定した API token を
 `Authorization: Bearer <token>` で利用できます。
+
+ログイン試行は接続元 IP とユーザー名の組ごとに1分間5回、接続元 IP 全体で
+1分間30回までです。reverse proxy 経由では同じ接続元 IP を利用者全員で共有します。
+記録は期限切れ時に削除し、合計4,096件まで保持します。試行制限や新規記録の容量上限に
+達すると `429 Too Many Requests` と `Retry-After: 60` を返します。
 
 録画済み番組の視聴は、Apple 系のネイティブ HLS 対応ブラウザでは HLS を使い、
 それ以外では MP4 を使います。ライブ視聴は、Apple 系のネイティブ HLS 対応
