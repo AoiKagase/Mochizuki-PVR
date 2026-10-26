@@ -1,0 +1,365 @@
+Fetching vulnerabilities from the database...
+
+Checking the code against the vulnerabilities...
+
+The package pattern matched the following 20 root packages:
+  mochizuki/internal/auth
+  mochizuki/internal/config
+  mochizuki/internal/domain
+  mochizuki/internal/database
+  mochizuki/internal/logging
+  mochizuki/internal/mirakurun
+  mochizuki/internal/operatorcontrol
+  mochizuki/internal/programstore
+  mochizuki/internal/reservationstore
+  mochizuki/internal/system
+  mochizuki/internal/operator
+  mochizuki/internal/rulestore
+  mochizuki/internal/schedulestore
+  mochizuki/internal/scheduler
+  mochizuki/internal/storage
+  mochizuki/internal/version
+  mochizuki/web
+  mochizuki/internal/wui
+  mochizuki/internal/cli
+  mochizuki/cmd/mochizuki
+Govulncheck scanned the following 12 modules and the go1.27.0 standard library:
+  mochizuki
+  github.com/dustin/go-humanize@v1.0.1
+  github.com/mattn/go-isatty@v0.0.24
+  github.com/ncruces/go-strftime@v1.0.0
+  github.com/remyoudompheng/bigfft@v0.0.0-20230129092748-24d4a6f8daec
+  golang.org/x/crypto@v0.55.0
+  golang.org/x/sys@v0.47.0
+  golang.org/x/text@v0.41.0
+  modernc.org/libc@v1.75.4
+  modernc.org/mathutil@v1.7.1
+  modernc.org/memory@v1.12.1
+  modernc.org/sqlite@v1.57.0
+
+=== Symbol Results ===
+
+Vulnerability #1: GO-2026-6809
+    Distrust compromised intermediate certificates in crypto/x509
+  More info: https://pkg.go.dev/vuln/GO-2026-6809
+  Standard library
+    Found in: crypto/x509@go1.27
+    Fixed in: crypto/x509@go1.27.3
+    Example traces found:
+      #1: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls x509.Certificate.Verify
+
+Vulnerability #2: GO-2026-6617
+    HTTP/2 server crash due to HPACK encoder race in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6617
+  Standard library
+    Found in: net/http/internal/http2@go1.27
+    Fixed in: net/http/internal/http2@go1.27.2
+    Example traces found:
+      #1: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.Close
+      #2: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.Close
+      #3: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.RoundTrip
+      #4: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.RoundTrip
+      #5: internal/wui/server.go:676:32: wui.shutdownServers calls http.Server.Shutdown, which calls http2.Server.GracefulShutdown
+      #6: internal/wui/server.go:676:32: wui.shutdownServers calls http.Server.Shutdown, which calls http2.Server.GracefulShutdown
+      #7: internal/wui/server.go:167:33: wui.Run calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #8: internal/wui/server.go:167:33: wui.Run calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #9: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.AddConn
+      #10: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.AddConn
+      #11: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.NewClientConn
+      #12: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.NewClientConn
+      #13: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.RoundTrip
+      #14: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.RoundTrip
+      #15: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.bufferedWriterTimeoutWriter.Write
+      #16: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.bufferedWriterTimeoutWriter.Write
+      #17: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.chunkWriter.Write
+      #18: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.chunkWriter.Write
+      #19: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.gzipReader.Close
+      #20: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.gzipReader.Close
+      #21: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.gzipReader.Read
+      #22: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.gzipReader.Read
+      #23: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.requestBody.Close
+      #24: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.requestBody.Close
+      #25: internal/wui/server.go:1046:16: wui.statusRecorder.Flush calls http.http2ResponseWriter.Flush, which calls http2.responseWriter.FlushError
+      #26: internal/wui/server.go:1046:16: wui.statusRecorder.Flush calls http.http2ResponseWriter.Flush, which calls http2.responseWriter.FlushError
+      #27: cmd/mochizuki/main.go:14:15: mochizuki.main calls fmt.Fprintln, which calls http2.responseWriter.Write
+      #28: cmd/mochizuki/main.go:14:15: mochizuki.main calls fmt.Fprintln, which calls http2.responseWriter.Write
+      #29: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http2.responseWriter.WriteHeader
+      #30: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http2.responseWriter.WriteHeader
+      #31: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.responseWriter.WriteString
+      #32: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.responseWriter.WriteString
+      #33: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.stickyErrWriter.Write
+      #34: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.stickyErrWriter.Write
+      #35: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close
+      #36: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close
+      #37: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.transportResponseBody.Read
+      #38: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.transportResponseBody.Read
+
+Vulnerability #3: GO-2026-6613
+    HTTP/1 server connection desynchronization after 2xx CONNECT response in
+    net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6613
+  Standard library
+    Found in: net/http@go1.27
+    Fixed in: net/http@go1.27.2
+    Example traces found:
+      #1: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close, which eventually calls http.CanonicalHeaderKey
+      #2: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do
+      #3: internal/mirakurun/client.go:176:16: mirakurun.Client.newRequest calls http.Header.Set
+      #4: internal/mirakurun/client.go:172:40: mirakurun.Client.newRequest calls http.NewRequestWithContext
+      #5: internal/wui/server.go:212:16: wui.newServerWithAssets calls http.ServeMux.HandleFunc
+      #6: internal/wui/server.go:167:33: wui.Run calls http.Server.ListenAndServe
+      #7: internal/wui/server.go:676:32: wui.shutdownServers calls http.Server.Shutdown
+      #8: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http.body.Close
+      #9: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.body.Read
+      #10: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http.bodyEOFSignal.Close
+      #11: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.bodyEOFSignal.Read
+      #12: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.bodyLocked.Read
+      #13: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.bufioFlushWriter.Write
+      #14: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http.cancelTimerBody.Close
+      #15: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.cancelTimerBody.Read
+      #16: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close, which eventually calls http.checkConnErrorWriter.Write
+      #17: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close, which eventually calls http.chunkWriter.Write
+      #18: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.connReader.Read
+      #19: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close, which eventually calls http.expectContinueReader.Close
+      #20: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.expectContinueReader.Read
+      #21: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http.gzipReader.Close
+      #22: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.gzipReader.Read
+      #23: internal/wui/server.go:1046:16: wui.statusRecorder.Flush calls http.http2ResponseWriter.Flush
+      #24: internal/auth/password.go:27:24: auth.HashPassword calls rand.Read, which eventually calls http.loggingConn.Read
+      #25: internal/cli/cli.go:1159:13: cli.update calls fmt.Fprintf, which calls http.loggingConn.Write
+      #26: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.maxBytesReader.Read
+      #27: internal/wui/live_mse.go:805:11: wui.liveVTTReader.Close calls sync.Once.Do, which eventually calls http.onceCloseListener.Close
+      #28: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.persistConn.Read
+      #29: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.persistConnWriter.ReadFrom
+      #30: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close, which eventually calls http.persistConnWriter.Write
+      #31: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close, which eventually calls http.readTrackingBody.Close
+      #32: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.readTrackingBody.Read
+      #33: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.readWriteCloserBody.Read
+      #34: internal/wui/server.go:1046:16: wui.statusRecorder.Flush calls http.response.Flush
+      #35: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.response.ReadFrom
+      #36: cmd/mochizuki/main.go:14:15: mochizuki.main calls fmt.Fprintln, which calls http.response.Write
+      #37: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader
+      #38: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http.response.WriteString
+      #39: internal/auth/password.go:27:24: auth.HashPassword calls rand.Read, which calls http.transportReadFromServerError.Error
+
+Vulnerability #4: GO-2026-6612
+    Double flow control refund on HTTP/2 server streams in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6612
+  Standard library
+    Found in: net/http/internal/http2@go1.27
+    Fixed in: net/http/internal/http2@go1.27.2
+    Example traces found:
+      #1: internal/wui/server.go:167:33: wui.Run calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #2: internal/wui/server.go:167:33: wui.Run calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #3: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.requestBody.Close
+      #4: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.requestBody.Close
+      #5: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.requestBody.Read
+      #6: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.requestBody.Read
+
+Vulnerability #5: GO-2026-6611
+    Excessive CPU consumption from repeated initial window changes in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6611
+  Standard library
+    Found in: net/http/internal/http2@go1.27
+    Fixed in: net/http/internal/http2@go1.27.2
+    Example traces found:
+      #1: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.Close
+      #2: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.Close
+      #3: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.RoundTrip
+      #4: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.RoundTrip
+      #5: internal/wui/server.go:676:32: wui.shutdownServers calls http.Server.Shutdown, which calls http2.Server.GracefulShutdown
+      #6: internal/wui/server.go:676:32: wui.shutdownServers calls http.Server.Shutdown, which calls http2.Server.GracefulShutdown
+      #7: internal/wui/server.go:167:33: wui.Run calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #8: internal/wui/server.go:167:33: wui.Run calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #9: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.AddConn
+      #10: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.AddConn
+      #11: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.NewClientConn
+      #12: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.NewClientConn
+      #13: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.RoundTrip
+      #14: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.RoundTrip
+      #15: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.bufferedWriterTimeoutWriter.Write
+      #16: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.bufferedWriterTimeoutWriter.Write
+      #17: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.chunkWriter.Write
+      #18: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.chunkWriter.Write
+      #19: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.gzipReader.Close
+      #20: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.gzipReader.Close
+      #21: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.gzipReader.Read
+      #22: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.gzipReader.Read
+      #23: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.requestBody.Close
+      #24: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.requestBody.Close
+      #25: internal/wui/server.go:1046:16: wui.statusRecorder.Flush calls http.http2ResponseWriter.Flush, which calls http2.responseWriter.FlushError
+      #26: internal/wui/server.go:1046:16: wui.statusRecorder.Flush calls http.http2ResponseWriter.Flush, which calls http2.responseWriter.FlushError
+      #27: cmd/mochizuki/main.go:14:15: mochizuki.main calls fmt.Fprintln, which calls http2.responseWriter.Write
+      #28: cmd/mochizuki/main.go:14:15: mochizuki.main calls fmt.Fprintln, which calls http2.responseWriter.Write
+      #29: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http2.responseWriter.WriteHeader
+      #30: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http2.responseWriter.WriteHeader
+      #31: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.responseWriter.WriteString
+      #32: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.responseWriter.WriteString
+      #33: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.stickyErrWriter.Write
+      #34: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.stickyErrWriter.Write
+      #35: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close
+      #36: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close
+      #37: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.transportResponseBody.Read
+      #38: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.transportResponseBody.Read
+
+Vulnerability #6: GO-2026-6610
+    HTTP/2 transport accepts malformed framing-related headers in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6610
+  Standard library
+    Found in: net/http/internal/http2@go1.27
+    Fixed in: net/http/internal/http2@go1.27.2
+    Example traces found:
+      #1: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.AddConn
+      #2: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.AddConn
+      #3: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.NewClientConn
+      #4: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.NewClientConn
+      #5: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.RoundTrip
+      #6: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.RoundTrip
+
+Vulnerability #7: GO-2026-6609
+    Lack of limit on size of parsed Range headers in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6609
+  Standard library
+    Found in: net/http@go1.27
+    Fixed in: net/http@go1.27.2
+    Example traces found:
+      #1: internal/wui/server.go:1164:20: wui.server.handleStatic calls http.ServeContent
+      #2: internal/wui/hls.go:245:18: wui.server.serveHLSSegment calls http.ServeFile
+      #3: internal/wui/server.go:1175:46: wui.server.handleStatic calls http.fileHandler.ServeHTTP
+
+Vulnerability #8: GO-2026-6608
+    Memory limit bypass when parsing MIME headers in net/textproto,
+    mime/multipart
+  More info: https://pkg.go.dev/vuln/GO-2026-6608
+  Standard library
+    Found in: net/textproto@go1.27
+    Fixed in: net/textproto@go1.27.2
+    Example traces found:
+      #1: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls textproto.Reader.ReadMIMEHeader
+
+Vulnerability #9: GO-2026-6607
+    Reject malformed ECH outer extension references in crypto/tls
+  More info: https://pkg.go.dev/vuln/GO-2026-6607
+  Standard library
+    Found in: crypto/tls@go1.27
+    Fixed in: crypto/tls@go1.27.2
+    Example traces found:
+      #1: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls tls.Conn.HandshakeContext
+      #2: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls tls.Conn.Read
+      #3: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls tls.Conn.Write
+      #4: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls tls.Dialer.DialContext
+
+Vulnerability #10: GO-2026-6605
+    HTTP/1 client connection desynchronization after CONNECT rejection in
+    net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6605
+  Standard library
+    Found in: net/http@go1.27
+    Fixed in: net/http@go1.27.2
+    Example traces found:
+      #1: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do
+
+Vulnerability #11: GO-2026-6603
+    HTTP/2 server memory exhaustion due to Trailer headers in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6603
+  Standard library
+    Found in: net/http/internal/http2@go1.27
+    Fixed in: net/http/internal/http2@go1.27.2
+    Example traces found:
+      #1: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.Close
+      #2: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.Close
+      #3: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.RoundTrip
+      #4: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.NetHTTPClientConn.RoundTrip
+      #5: internal/wui/server.go:676:32: wui.shutdownServers calls http.Server.Shutdown, which calls http2.Server.GracefulShutdown
+      #6: internal/wui/server.go:676:32: wui.shutdownServers calls http.Server.Shutdown, which calls http2.Server.GracefulShutdown
+      #7: internal/wui/server.go:167:33: wui.Run calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #8: internal/wui/server.go:167:33: wui.Run calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #9: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.AddConn
+      #10: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.AddConn
+      #11: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.NewClientConn
+      #12: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.NewClientConn
+      #13: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.RoundTrip
+      #14: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.Transport.RoundTrip
+      #15: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.bufferedWriterTimeoutWriter.Write
+      #16: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.bufferedWriterTimeoutWriter.Write
+      #17: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.chunkWriter.Write
+      #18: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.chunkWriter.Write
+      #19: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.gzipReader.Close
+      #20: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.gzipReader.Close
+      #21: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.gzipReader.Read
+      #22: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.gzipReader.Read
+      #23: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.requestBody.Close
+      #24: internal/mirakurun/client.go:99:29: mirakurun.Client.GetJSON calls http.Client.Do, which eventually calls http2.requestBody.Close
+      #25: internal/wui/server.go:1046:16: wui.statusRecorder.Flush calls http.http2ResponseWriter.Flush, which calls http2.responseWriter.FlushError
+      #26: internal/wui/server.go:1046:16: wui.statusRecorder.Flush calls http.http2ResponseWriter.Flush, which calls http2.responseWriter.FlushError
+      #27: cmd/mochizuki/main.go:14:15: mochizuki.main calls fmt.Fprintln, which calls http2.responseWriter.Write
+      #28: cmd/mochizuki/main.go:14:15: mochizuki.main calls fmt.Fprintln, which calls http2.responseWriter.Write
+      #29: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http2.responseWriter.WriteHeader
+      #30: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http2.responseWriter.WriteHeader
+      #31: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.responseWriter.WriteString
+      #32: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.responseWriter.WriteString
+      #33: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.stickyErrWriter.Write
+      #34: internal/wui/server.go:1041:30: wui.statusRecorder.WriteHeader calls http.response.WriteHeader, which eventually calls http2.stickyErrWriter.Write
+      #35: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close
+      #36: internal/mirakurun/client.go:103:2: mirakurun.Client.GetJSON calls http2.transportResponseBody.Close
+      #37: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.transportResponseBody.Read
+      #38: internal/storage/json.go:77:22: storage.BackupFile calls io.Copy, which eventually calls http2.transportResponseBody.Read
+
+=== Package Results ===
+
+Vulnerability #1: GO-2026-6604
+    Root.Mkdir(All) can follow junctions out of the root on Windows in os
+  More info: https://pkg.go.dev/vuln/GO-2026-6604
+  Standard library
+    Found in: os@go1.27
+    Fixed in: os@go1.27.2
+    Platforms: windows
+
+=== Module Results ===
+
+Vulnerability #1: GO-2026-6600
+    Recognize yield as regexp preceder keyword in html/template
+  More info: https://pkg.go.dev/vuln/GO-2026-6600
+  Standard library
+    Found in: stdlib@go1.27
+    Fixed in: stdlib@go1.27.2
+
+Vulnerability #2: GO-2026-6599
+    Reset context tracking on consecutive template expressions in html/template
+  More info: https://pkg.go.dev/vuln/GO-2026-6599
+  Standard library
+    Found in: stdlib@go1.27
+    Fixed in: stdlib@go1.27.2
+
+Vulnerability #3: GO-2026-6355
+    Prevent DoS on deadlocked established channel in golang.org/x/crypto/ssh
+  More info: https://pkg.go.dev/vuln/GO-2026-6355
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.55.0
+    Fixed in: golang.org/x/crypto@v0.56.0
+
+Vulnerability #4: GO-2026-6354
+    Prevent DoS on deadlocked undecided channel in golang.org/x/crypto/ssh
+  More info: https://pkg.go.dev/vuln/GO-2026-6354
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.55.0
+    Fixed in: golang.org/x/crypto@v0.56.0
+
+Vulnerability #5: GO-2026-5932
+    The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design,
+    and has known security issues
+  More info: https://pkg.go.dev/vuln/GO-2026-5932
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.55.0
+    Fixed in: N/A
+
+Your code is affected by 11 vulnerabilities from the Go standard library.
+This scan also found 1 vulnerability in packages you import and 5
+vulnerabilities in modules you require, but your code doesn't appear to call
+these vulnerabilities.
+go.exe : exit status 3
+At line:1 char:1
++ & "C:\Program Files\Go\bin\go.exe" run golang.org/x/vuln/cmd/govulnch ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (exit status 3:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
