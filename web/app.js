@@ -1524,6 +1524,10 @@
     }
     var height = Math.ceil(topbar.getBoundingClientRect().height);
     document.documentElement.style.setProperty("--topbar-height", height + "px");
+    var navigation = document.querySelector(".main-nav");
+    if (navigation && state.currentView === "schedule") {
+      document.documentElement.style.setProperty("--schedule-header-height", Math.ceil(navigation.getBoundingClientRect().height) + "px");
+    }
   }
 
   var stickyOffsetSyncFrame = 0;
@@ -1543,13 +1547,77 @@
     return window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
   }
 
+  function isCompactScheduleHeader() {
+    return window.matchMedia && window.matchMedia("(max-width: 1023px)").matches;
+  }
+
+  function closeScheduleManagement() {
+    var menu = document.querySelector(".management-menu");
+    if (!menu || !menu.open || state.currentView !== "schedule") return;
+    var restore = menu.querySelector(".management-menu-list").contains(document.activeElement);
+    menu.open = false;
+    if (restore) menu.querySelector("summary").focus();
+  }
+
+  function syncScheduleHeaderLayout() {
+    var schedule = state.currentView === "schedule";
+    var compact = schedule && isCompactScheduleHeader();
+    var target = byId(compact ? "scheduleCompactFilters" : "schedulePrimaryFilters");
+    ["scheduleTypeField", "scheduleChannelField"].forEach(function (id) {
+      var field = byId(id);
+      if (field && target && field.parentNode !== target) {
+        if (field.contains(document.activeElement)) byId("scheduleFilterButton").focus();
+        target.appendChild(field);
+      }
+    });
+    var logout = byId("logoutButton");
+    var logoutTarget = schedule ? byId("managementMenuList") : byId("mainNavPrimary");
+    if (logout && logoutTarget && logout.parentNode !== logoutTarget) {
+      if (schedule) logoutTarget.appendChild(logout);
+      else logoutTarget.insertBefore(logout, byId("logoutHome"));
+    }
+    var conflict = byId("scheduleConflictSummary");
+    if (conflict) {
+      if (compact) byId("mainNavPrimary").insertBefore(conflict, document.querySelector(".management-menu"));
+      else byId("scheduleStatusSummary").appendChild(conflict);
+    }
+    var range = byId("scheduleWindow");
+    if (range && range.closest(".view-head")) byId("scheduleRangeSlot").appendChild(range.closest("label"));
+    setScheduleMenuOpen(document.body.classList.contains("schedule-menu-open"));
+    updateScheduleFilterCount();
+    updateScheduleOperationalMessage(state.lastError ? state.lastError.message : (operatorAlive() ? "オペレータ稼働中" : "オペレータ停止中"), state.lastError ? "error" : (operatorAlive() ? "ok" : "stopped"));
+    queueStickyOffsetSync();
+  }
+
+  function updateScheduleFilterCount() {
+    var count = (state.scheduleType ? 1 : 0) + (state.scheduleChannel ? 1 : 0) + (state.scheduleGenre ? 1 : 0) + (state.scheduleWindowMode && state.scheduleWindowMode !== "all" ? 1 : 0) + (state.scheduleHiddenChannels.length ? 1 : 0);
+    text(byId("scheduleFilterLabel"), "絞り込み" + (count ? "（" + count + "）" : ""));
+    toggleClass(byId("scheduleFilterButton"), "has-filters", count > 0);
+  }
+
+  function updateScheduleOperationalMessage(message, kind) {
+    var control = byId("scheduleOperatorStatus");
+    if (!control) return;
+    var compact = isCompactScheduleHeader();
+    var shortText = kind === "error" ? "通信エラー" : kind === "ok" ? (compact ? "稼働中" : "オペレータ稼働中") : kind === "stopped" ? (compact ? "停止中" : "オペレータ停止中") : (message.length > 16 ? "通知あり" : message);
+    control.textContent = shortText;
+    control.title = message;
+    control.setAttribute("aria-label", message + "。詳細を開く");
+    control.className = "schedule-status-pill " + kind;
+    text(byId("scheduleOperationalDetail"), message);
+  }
+
   function setScheduleMenuOpen(open) {
-    var expanded = Boolean(open);
+    var expanded = Boolean(open && isCompactScheduleHeader() && state.currentView === "schedule");
+    if (expanded) {
+      closeScheduleFilter();
+      closeScheduleManagement();
+    }
     document.body.classList.toggle("schedule-menu-open", expanded);
     var button = byId("scheduleMenuButton");
     var drawer = byId("mainNavDrawer");
     var backdrop = byId("scheduleMenuBackdrop");
-    var mobileSchedule = isMobileScheduleLayout() && state.currentView === "schedule";
+    var mobileSchedule = isCompactScheduleHeader() && state.currentView === "schedule";
     if (button) {
       button.setAttribute("aria-expanded", expanded ? "true" : "false");
     }
@@ -1567,7 +1635,7 @@
     if (backdrop) {
       backdrop.hidden = !expanded;
     }
-    if (expanded && drawer && isMobileScheduleLayout() && state.currentView === "schedule") {
+    if (expanded && drawer && mobileSchedule) {
       window.setTimeout(function () {
         if (!document.body.classList.contains("schedule-menu-open")) {
           return;
@@ -1584,8 +1652,12 @@
     setScheduleMenuOpen(false);
   }
 
-  function setScheduleFilterOpen(open) {
-    var expanded = Boolean(open);
+  function setScheduleFilterOpen(open, focusID) {
+    var expanded = Boolean(open && state.currentView === "schedule");
+    if (expanded) {
+      closeScheduleMenu();
+      closeScheduleManagement();
+    }
     document.body.classList.toggle("schedule-filter-open", expanded);
     var button = byId("scheduleFilterButton");
     var controls = byId("scheduleNavControls");
@@ -1594,6 +1666,15 @@
     }
     if (!expanded && controls && controls.contains(document.activeElement) && button && typeof button.focus === "function") {
       button.focus();
+    }
+    if (controls) {
+      controls.hidden = !expanded;
+      controls.inert = !expanded;
+      if (expanded) window.setTimeout(function () {
+        if (controls.hidden) return;
+        var target = focusID ? byId(focusID) : controls.querySelector("select, button");
+        if (target) target.focus();
+      }, 0);
     }
   }
 
@@ -1718,6 +1799,7 @@
       return;
     }
     state.currentView = found ? name : "dashboard";
+    syncScheduleHeaderLayout();
     if (state.currentView === "schedule" && previousView !== "schedule") {
       state.scheduleGuideScrollToCurrentTime = true;
     }
@@ -1794,13 +1876,13 @@
     }
     var scheduleOperator = byId("scheduleOperatorStatus");
     if (scheduleOperator) {
-      scheduleOperator.textContent = statusText;
-      scheduleOperator.className = "schedule-status-pill" + (state.lastError ? " error" : (alive ? " ok" : ""));
+      updateScheduleOperationalMessage(statusText, state.lastError ? "error" : (alive ? "ok" : "stopped"));
     }
     text(byId("scheduleRecordingSummary"), "録画中 " + recordingCount);
     text(byId("scheduleReserveSummary"), "予約 " + reserveCount);
     text(byId("scheduleConflictSummary"), "競合 " + conflicts);
     toggleClass(byId("scheduleConflictSummary"), "has-conflicts", conflicts > 0);
+    if (byId("scheduleConflictSummary")) byId("scheduleConflictSummary").hidden = conflicts === 0;
   }
 
   function initNavigation() {
@@ -1925,6 +2007,12 @@
       if (event.key === "Escape" && (document.body.classList.contains("schedule-menu-open") || document.body.classList.contains("schedule-filter-open"))) {
         closeScheduleFilter();
         closeScheduleMenu();
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "Escape" && state.currentView === "schedule" && document.querySelector(".management-menu[open]")) {
+        closeScheduleManagement();
+        document.querySelector(".management-menu > summary").focus();
         event.preventDefault();
         return;
       }
@@ -3656,7 +3744,7 @@
     button.type = "button";
     button.className = "channel-link";
     button.textContent = label || channelID || "不明なチャンネル";
-    button.title = "番組をこのチャンネルで検索";
+    button.title = (label || channelID || "不明なチャンネル") + "：番組をこのチャンネルで検索";
     button.addEventListener("click", function () {
       state.listFilters.search.channelID = channelID || "";
       state.searchPage = 1;
@@ -4401,6 +4489,12 @@
     }
     var channels = state.schedule || [];
     ensureMobileScheduleChannelDefault(channels);
+    // A refreshed guide may no longer contain a selected channel/day/genre.
+    // Normalize first so the visible guide and the condition count agree.
+    renderScheduleChannelOptions(channels);
+    renderScheduleFilterOptions(channels);
+    syncScheduleFilterControls();
+    updateScheduleFilterCount();
     var channelOrder = [];
     var channelMeta = {};
     var channelGroups = [];
@@ -4470,9 +4564,6 @@
         channelGroups.push(channelMeta[id]);
       }
     });
-    renderScheduleChannelOptions(channels);
-    renderScheduleFilterOptions(channels);
-    syncScheduleFilterControls();
     syncScheduleZoomControls();
     document.body.classList.remove("schedule-list-open");
     root.innerHTML = "";
@@ -4835,8 +4926,8 @@
     var grid = document.createElement("div");
     grid.className = "schedule-guide-grid";
     grid.setAttribute("data-schedule-zoom", state.scheduleZoomLevel);
-    grid.style.gridTemplateColumns = "48px repeat(" + channelGroups.length + ", minmax(132px, 1fr))";
-    grid.style.minWidth = (48 + channelGroups.length * 132) + "px";
+    grid.style.gridTemplateColumns = "48px repeat(" + channelGroups.length + ", minmax(192px, 1fr))";
+    grid.style.minWidth = (48 + channelGroups.length * 192) + "px";
 
     var corner = document.createElement("div");
     corner.className = "schedule-corner";
@@ -4849,14 +4940,11 @@
       var nameRow = document.createElement("div");
       nameRow.className = "schedule-channel-name-row";
       nameRow.appendChild(channelLink(group.id, group.name));
-      heading.appendChild(nameRow);
-      var mediaRow = document.createElement("div");
-      mediaRow.className = "schedule-channel-media-row";
       if (group.logo) {
-        mediaRow.appendChild(channelLogoElement("schedule-channel-logo", group.id));
+        heading.appendChild(channelLogoElement("schedule-channel-logo", group.id));
       }
-      mediaRow.appendChild(renderChannelActions(group.id, group.name));
-      heading.appendChild(mediaRow);
+      heading.appendChild(nameRow);
+      heading.appendChild(renderChannelActions(group.id, group.name));
       grid.appendChild(heading);
     });
 
@@ -4906,9 +4994,11 @@
     if (!channelID || channelID === "unknown") {
       return row;
     }
-    row.appendChild(actionButton("視聴", "チャンネルを視聴", function () {
+    var watch = actionButton("視聴", "チャンネルを視聴", function () {
       openLiveChannelPlayer(label || channelID || "チャンネル", channelID);
-    }));
+    });
+    watch.insertBefore(iconUse("play"), watch.firstChild);
+    row.appendChild(watch);
     return row;
   }
 
@@ -6857,8 +6947,7 @@
     }
     var scheduleOperator = byId("scheduleOperatorStatus");
     if (scheduleOperator) {
-      scheduleOperator.textContent = message;
-      scheduleOperator.className = "schedule-status-pill";
+      updateScheduleOperationalMessage(message, "busy");
     }
   }
 
@@ -7356,19 +7445,39 @@
     syncStickyOffsets();
     window.addEventListener("resize", queueStickyOffsetSync);
     window.addEventListener("orientationchange", queueStickyOffsetSync);
-    var previousMobileScheduleLayout = isMobileScheduleLayout();
+    var previousCompactScheduleHeader = isCompactScheduleHeader();
     window.addEventListener("resize", function () {
-      var mobileScheduleLayout = isMobileScheduleLayout();
-      if (mobileScheduleLayout !== previousMobileScheduleLayout) {
+      var compact = isCompactScheduleHeader();
+      if (compact !== previousCompactScheduleHeader) {
         closeScheduleMenu();
         closeScheduleFilter();
-      } else if (!mobileScheduleLayout) {
+        closeScheduleManagement();
+        syncScheduleHeaderLayout();
+      }
+      previousCompactScheduleHeader = compact;
+    });
+    initNavigation();
+    if (window.ResizeObserver) {
+      var headerObserver = new window.ResizeObserver(queueStickyOffsetSync);
+      headerObserver.observe(document.querySelector(".topbar"));
+      headerObserver.observe(document.querySelector(".main-nav"));
+    }
+    document.querySelector(".management-menu").addEventListener("toggle", function (event) {
+      if (event.target.open && state.currentView === "schedule") {
         closeScheduleMenu();
         closeScheduleFilter();
       }
-      previousMobileScheduleLayout = mobileScheduleLayout;
     });
-    initNavigation();
+    document.addEventListener("click", function (event) {
+      if (state.currentView !== "schedule" || !event.target.closest) return;
+      if (!event.target.closest("#mainNavDrawer, #scheduleMenuButton")) closeScheduleMenu();
+      if (!event.target.closest("#scheduleNavControls, #scheduleFilterButton, #scheduleOperatorStatus")) closeScheduleFilter();
+      if (!event.target.closest(".management-menu")) closeScheduleManagement();
+    });
+    byId("scheduleResetFilters").addEventListener("click", resetScheduleFilters);
+    byId("scheduleOperatorStatus").addEventListener("click", function () {
+      setScheduleFilterOpen(true, "scheduleOperationalDetail");
+    });
     document.querySelectorAll("[data-view-link]").forEach(function (link) {
       link.addEventListener("click", function () {
         closeScheduleMenu();

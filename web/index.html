@@ -90,7 +90,9 @@
   </header>
 
   <nav class="main-nav" aria-label="メインナビゲーション">
+    <div id="mainNavPrimary" class="main-nav-primary">
     <button id="scheduleMenuButton" class="schedule-menu-button icon-button" type="button" title="メニュー" aria-label="メニュー" aria-expanded="false" aria-controls="mainNavDrawer"><svg class="icon"><use href="#icon-list"></use></svg><span class="screen-reader-only">メニュー</span></button>
+    <div class="schedule-brand"><img src="/favicon.png" width="24" height="24" alt=""><span>Mochizuki PVR</span></div>
     <div id="mainNavDrawer" class="main-nav-drawer">
       <div class="main-nav-links">
         <a href="#dashboard" data-view-link="dashboard" class="active">ダッシュボード</a>
@@ -101,49 +103,44 @@
         <a href="#rules" data-view-link="rules">ルール</a>
       </div>
     </div>
+    <button id="scheduleOperatorStatus" class="schedule-status-pill" type="button" aria-controls="scheduleNavControls" title="稼働状況の詳細">読み込み中</button>
     <details class="management-menu">
       <summary class="icon-button" title="管理" aria-label="管理"><svg class="icon"><use href="#icon-settings"></use></svg><span class="screen-reader-only">管理</span></summary>
-      <div class="management-menu-list">
+      <div id="managementMenuList" class="management-menu-list">
         <a href="#status" data-view-link="status">ステータス</a>
         <a href="#settings" data-view-link="settings">設定</a>
         <a href="#logs" data-view-link="logs">ログ</a>
       </div>
     </details>
     <button id="logoutButton" class="secondary-button" type="button">ログアウト</button>
+    <span id="logoutHome" hidden></span>
+    </div>
+    <div id="scheduleToolbar" class="schedule-toolbar" role="group" aria-label="番組表操作">
+      <div id="schedulePrimaryFilters" class="schedule-primary-filters">
+        <label class="schedule-field schedule-day-field" for="scheduleDay"><span>日付</span><select id="scheduleDay"></select></label>
+        <label id="scheduleTypeField" class="schedule-field schedule-type-field" for="scheduleType"><span>種別</span><select id="scheduleType"><option value="">すべて</option><option value="GR">GR</option><option value="BS">BS</option><option value="CS">CS</option><option value="EX">EX</option></select></label>
+        <label id="scheduleChannelField" class="schedule-field schedule-channel-field" for="scheduleChannel"><span>チャンネル</span><select id="scheduleChannel"><option value="">すべて</option></select></label>
+      </div>
+      <button id="scheduleFilterButton" class="schedule-filter-button secondary-button" type="button" aria-expanded="false" aria-controls="scheduleNavControls"><svg class="icon"><use href="#icon-filter"></use></svg><span id="scheduleFilterLabel">絞り込み</span></button>
+      <button id="scheduleRefreshButton" class="icon-button secondary-button" type="button" title="再読込" aria-label="再読込"><svg class="icon"><use href="#icon-refresh-cw"></use></svg></button>
     <div id="scheduleStatusSummary" class="schedule-status-summary">
-      <span id="scheduleOperatorStatus" class="schedule-status-pill">読み込み中</span>
       <span id="scheduleRecordingSummary">録画中 0</span>
       <span id="scheduleReserveSummary">予約 0</span>
       <span id="scheduleConflictSummary" class="schedule-conflict-summary">競合 0</span>
-      <button id="scheduleRefreshButton" class="icon-button" type="button" title="再読込" aria-label="再読込"><svg class="icon"><use href="#icon-refresh-cw"></use></svg><span class="screen-reader-only">再読込</span></button>
     </div>
-    <button id="scheduleFilterButton" class="schedule-filter-button icon-button" type="button" title="番組表フィルタ" aria-label="番組表フィルタ" aria-expanded="false" aria-controls="scheduleNavControls"><svg class="icon"><use href="#icon-filter"></use></svg><span class="screen-reader-only">番組表フィルタ</span></button>
-    <div id="scheduleNavControls" class="schedule-nav-controls" aria-label="番組表フィルタ">
-      <label class="icon-field-label" for="scheduleType" title="種別"><svg class="icon"><use href="#icon-filter"></use></svg><span class="screen-reader-only">種別</span></label>
-      <select id="scheduleType">
-        <option value="">すべて</option>
-        <option value="GR">GR</option>
-        <option value="BS">BS</option>
-        <option value="CS">CS</option>
-        <option value="EX">EX</option>
-      </select>
-      <label class="icon-field-label" for="scheduleChannel" title="表示チャンネル"><svg class="icon"><use href="#icon-list"></use></svg><span class="screen-reader-only">表示チャンネル</span></label>
-      <select id="scheduleChannel">
-        <option value="">すべて</option>
-      </select>
-      <label class="icon-field-label" for="scheduleDay" title="日付"><svg class="icon"><use href="#icon-calendar"></use></svg><span class="screen-reader-only">日付</span></label>
-      <select id="scheduleDay"></select>
-      <label class="icon-field-label" for="scheduleGenre" title="ジャンル"><svg class="icon"><use href="#icon-tag"></use></svg><span class="screen-reader-only">ジャンル</span></label>
-      <select id="scheduleGenre">
-        <option value="">全ジャンル</option>
-      </select>
-      <label class="icon-field-label" for="scheduleHiddenChannel" title="隠すチャンネル"><svg class="icon"><use href="#icon-eye-off"></use></svg><span class="screen-reader-only">隠すチャンネル</span></label>
-      <select id="scheduleHiddenChannel">
-        <option value="">選択</option>
-      </select>
-      <button id="scheduleHideChannelButton" class="icon-button" type="button" title="選択したチャンネルを番組表から非表示にする" aria-label="選択したチャンネルを番組表から非表示にする"><svg class="icon"><use href="#icon-eye-off"></use></svg><span class="screen-reader-only">非表示</span></button>
-      <button id="scheduleShowChannelButton" class="icon-button" type="button" title="選択したチャンネルを番組表に戻す" aria-label="選択したチャンネルを番組表に戻す"><svg class="icon"><use href="#icon-eye"></use></svg><span class="screen-reader-only">再表示</span></button>
-      <button id="scheduleClearHiddenButton" class="icon-button" type="button" title="非表示チャンネルをすべて戻す" aria-label="非表示チャンネルをすべて戻す"><svg class="icon"><use href="#icon-rotate-ccw"></use></svg><span class="screen-reader-only">全表示</span></button>
+    <div id="scheduleNavControls" class="schedule-nav-controls" role="region" aria-label="番組表の絞り込み" hidden inert>
+      <div id="scheduleCompactFilters" class="schedule-compact-filters"></div>
+      <label class="schedule-field" for="scheduleGenre"><span>ジャンル</span><select id="scheduleGenre"><option value="">全ジャンル</option></select></label>
+      <div id="scheduleRangeSlot"></div>
+      <label class="schedule-field" for="scheduleHiddenChannel"><span>表示する局</span><select id="scheduleHiddenChannel"><option value="">選択</option></select></label>
+      <div class="schedule-channel-visibility-actions">
+        <button id="scheduleHideChannelButton" class="secondary-button" type="button">非表示にする</button>
+        <button id="scheduleShowChannelButton" class="secondary-button" type="button">再表示する</button>
+        <button id="scheduleClearHiddenButton" class="secondary-button" type="button">全局を表示</button>
+      </div>
+      <button id="scheduleResetFilters" class="secondary-button" type="button">絞り込みを解除</button>
+      <p id="scheduleOperationalDetail" class="schedule-operational-detail" tabindex="-1" role="status"></p>
+    </div>
     </div>
   </nav>
 

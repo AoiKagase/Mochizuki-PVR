@@ -791,7 +791,7 @@ func TestNativeDashboardOnAirReserveShowsImmediateRecordingFeedback(t *testing.T
 		`オペレータが停止中です。録画を開始するには mochizuki run operator を起動してください`,
 		`function updateOperationalStatus()`,
 		`var statusText = state.lastError ? state.lastError.message : (alive ? "オペレータ稼働中" : "オペレータ停止中");`,
-		`scheduleOperator.textContent = statusText;`,
+		`updateScheduleOperationalMessage(statusText,`,
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("web/app.js missing %q", want)

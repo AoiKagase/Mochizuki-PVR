@@ -203,6 +203,194 @@ test("layout and contrast: desktop and touch, light and dark", async t => {
   }
 });
 
+test("schedule header fits every breakpoint and restores ordinary navigation", async t => {
+  for (const width of [320, 375, 768, 1023, 1024, 1440, 1920]) for (const colorScheme of ["light", "dark"]) await t.test(width + " " + colorScheme, async () => {
+    const { page, context } = await pageFor({ viewport: { width, height: 900 }, colorScheme, hasTouch: width < 1024, isMobile: width < 1024 });
+    try {
+      const manyChannels = Array.from({ length: 20 }, (_, i) => {
+        const entry = { ...channel, id: "wide-" + i, name: "長いチャンネル名を含む放送局 " + (i + 1) };
+        return { channel: entry, programs: [{ ...program, id: "wide-program-" + i, channel: entry }] };
+      });
+      await page.route("**/api/schedule", route => route.fulfill({ json: manyChannels }));
+      await loaded(page, "schedule");
+      await page.waitForFunction(() => document.querySelectorAll(".schedule-card").length > 0);
+      const geometry = await page.evaluate(() => {
+        const rect = id => { const r = document.getElementById(id).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, height: r.height }; };
+        const nav = document.querySelector(".main-nav").getBoundingClientRect(), guide = document.querySelector(".schedule-guide-scroll").getBoundingClientRect();
+        const filter = document.querySelector("#scheduleFilterButton").getBoundingClientRect(), refresh = document.querySelector("#scheduleRefreshButton").getBoundingClientRect();
+        return { width: innerWidth, scroll: document.documentElement.scrollWidth, primary: rect("mainNavPrimary"), toolbar: rect("scheduleToolbar"), filterRight: filter.right, refreshLeft: refresh.left, drawerRight: document.querySelector("#mainNavDrawer").getBoundingClientRect().right, nav: nav.height, guideTop: guide.top, guideBottom: guide.bottom, dayVisible: document.querySelector("#scheduleDay").getBoundingClientRect().width > 0, conflictHidden: document.querySelector("#scheduleConflictSummary").hidden, logoutInMenu: Boolean(document.querySelector(".management-menu-list #logoutButton")), channelHeight: document.querySelector(".schedule-channel-head").getBoundingClientRect().height, columnWidth: document.querySelector(".schedule-channel-head").getBoundingClientRect().width };
+      });
+      assert.equal(geometry.scroll, width, JSON.stringify(geometry));
+      assert.equal(geometry.primary.height, 48);
+      assert.equal(geometry.toolbar.height, 48);
+      assert.ok(geometry.filterRight <= geometry.refreshLeft, JSON.stringify(geometry));
+      assert.ok(geometry.toolbar.top >= geometry.primary.bottom);
+      assert.ok(geometry.guideBottom <= 901 && geometry.guideBottom >= 898, JSON.stringify(geometry));
+      assert.equal(geometry.channelHeight, 52);
+      assert.ok(geometry.columnWidth >= 192);
+      assert.ok(geometry.dayVisible && geometry.conflictHidden && geometry.logoutInMenu);
+      assert.equal(await page.locator("#scheduleType").isVisible(), width >= 1024);
+      if (width < 1024) {
+        assert.ok(geometry.drawerRight <= 1, "closed navigation obscures the guide: " + JSON.stringify(geometry));
+        const targets = await page.locator("#scheduleToolbar button, #scheduleToolbar select, .schedule-channel-head button").evaluateAll(es => es.filter(e => e.getBoundingClientRect().width).map(e => ({ w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height })));
+        assert.ok(targets.every(e => e.w >= 44 && e.h >= 44), JSON.stringify(targets));
+        await page.locator("#scheduleMenuButton").click();
+      }
+      await page.locator('a[data-view-link="dashboard"]').click();
+      await page.locator('[data-view="dashboard"]').waitFor({ state: "visible" });
+      assert.equal(await page.locator("#scheduleToolbar").isVisible(), false);
+      assert.equal(await page.locator(".main-nav-primary > #logoutButton").count(), 1);
+      assert.equal(await page.locator("#mainNavDrawer").evaluate(e => e.inert), false);
+    } finally { await context.close(); }
+  });
+});
+
+test("schedule panels are exclusive, keyboard accessible and retain filter state across resize", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 } });
+  try {
+    await loaded(page, "schedule");
+    await page.locator("#scheduleFilterButton").click();
+    await page.locator("#scheduleGenre").selectOption("news");
+    assert.match(await page.locator("#scheduleFilterButton").textContent(), /絞り込み（2）/); // genre + default24-hour range
+    await page.locator("#scheduleHiddenChannel").selectOption(channel.id);
+    await page.locator("#scheduleHideChannelButton").click();
+    assert.match(await page.locator("#scheduleFilterButton").textContent(), /絞り込み（3）/);
+    await page.locator(".management-menu > summary").click();
+    assert.equal(await page.locator("#scheduleNavControls").isVisible(), false);
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator(".management-menu").evaluate(e => e.open), false);
+    assert.equal(await page.locator(".management-menu > summary").evaluate(e => e === document.activeElement), true);
+    await page.setViewportSize({ width: 768, height: 900 });
+    await page.locator("#scheduleFilterButton").click();
+    await page.locator("#scheduleType").selectOption("GR");
+    assert.equal(await page.locator("#scheduleGenre").inputValue(), "news");
+    await page.locator("#scheduleMenuButton").click();
+    assert.equal(await page.locator("#scheduleNavControls").isVisible(), false);
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#mainNavDrawer").evaluate(e => e.inert), true);
+    await page.locator("#scheduleFilterButton").click();
+    await page.locator("#scheduleResetFilters").click();
+    assert.equal(await page.locator("#scheduleGenre").inputValue(), "");
+    assert.equal(await page.locator("#scheduleWindow").inputValue(), "all");
+    assert.equal(await page.locator("#scheduleFilterButton").textContent(), "絞り込み");
+    await page.locator("#scheduleGenre").focus();
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#scheduleFilterButton").evaluate(e => e === document.activeElement), true);
+    await page.locator("#scheduleFilterButton").click();
+    await page.locator("#scheduleType").focus();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForFunction(() => !document.querySelector("#scheduleFilterButton").matches('[aria-expanded="true"]'));
+    assert.equal(await page.locator("#scheduleType").isVisible(), true);
+    assert.equal(await page.locator("#scheduleType").count(), 1);
+    await page.locator("#scheduleFilterButton").click();
+    await page.locator(".schedule-card").first().click();
+    assert.equal(await page.locator("#scheduleNavControls").isVisible(), false);
+  } finally { await context.close(); }
+});
+
+test("schedule refresh reconciles vanished filters before counting and rendering", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 } });
+  try {
+    await loaded(page, "schedule");
+    await page.locator("#scheduleChannel").selectOption(channel.id);
+    await page.locator("#scheduleType").selectOption("GR");
+    await page.locator("#scheduleFilterButton").click();
+    await page.locator("#scheduleGenre").selectOption("news");
+    assert.match(await page.locator("#scheduleFilterButton").textContent(), /（4）/);
+    const replacement = { ...channel, id: "replacement", name: "更新後のチャンネル" };
+    await page.route("**/api/schedule", route => route.fulfill({ json: [{ channel: replacement, programs: [{ ...program, id: "replacement-program", category: "movie", channel: replacement }] }] }));
+    await page.locator("#scheduleRefreshButton").click();
+    await page.waitForFunction(() => !document.querySelector("#scheduleRefreshButton").disabled);
+    assert.equal(await page.locator("#scheduleChannel").inputValue(), "");
+    assert.equal(await page.locator("#scheduleGenre").inputValue(), "");
+    assert.match(await page.locator("#scheduleFilterButton").textContent(), /（2）/);
+    await page.locator('.schedule-card[data-program-id="replacement-program"]').waitFor({ state: "visible" });
+  } finally { await context.close(); }
+});
+
+test("guide watch stays inline and channel names still search", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 } });
+  try {
+    await loaded(page, "schedule");
+    const head = page.locator(".schedule-channel-head").first();
+    const watch = head.getByRole("button", { name: "視聴", exact: true });
+    const aligned = await head.evaluate(e => {
+      const n = e.querySelector(".channel-link").getBoundingClientRect(), b = e.querySelector(".channel-actions button").getBoundingClientRect();
+      return n.right <= b.left && Math.abs((n.top + n.bottom) / 2 - (b.top + b.bottom) / 2) <= 1;
+    });
+    assert.ok(aligned);
+    await watch.click();
+    await page.locator("#playerDialog").waitFor({ state: "visible" });
+    await page.keyboard.press("Escape");
+    await head.locator(".channel-link").click();
+    await page.waitForURL("**/#search");
+    await page.waitForFunction(id => document.querySelector("#searchChannelID").value === id, channel.id);
+    assert.equal(await page.locator("#searchChannelID").inputValue(), channel.id);
+  } finally { await context.close(); }
+});
+
+test("graphite guide preserves genre strips, status names and readable text", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 }, colorScheme: "dark" });
+  try {
+    const next = { ...program, id: "movie", category: "movie", start: program.end, end: program.end + 1800000 };
+    await page.route("**/api/schedule", route => route.fulfill({ json: [{ channel, programs: [program, next] }] }));
+    await loaded(page, "schedule");
+    await page.waitForFunction(() => document.querySelectorAll(".schedule-card").length === 2);
+    const colors = await page.locator(".schedule-card").evaluateAll(es => es.map(e => ({ background: getComputedStyle(e).backgroundColor, stripe: getComputedStyle(e, "::before").backgroundColor, stripeWidth: getComputedStyle(e, "::before").width })));
+    assert.equal(colors[0].background, "rgb(25, 25, 27)");
+    assert.equal(colors[0].background, colors[1].background);
+    assert.notEqual(colors[0].stripe, colors[1].stripe);
+    assert.equal(colors[0].stripeWidth, "2px");
+    const measureGuideContrast = () => page.evaluate(() => {
+      const canvas = document.createElement("canvas"), ctx = canvas.getContext("2d");
+      const rgba = color => { ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = color; ctx.fillRect(0, 0, 1, 1); return [...ctx.getImageData(0, 0, 1, 1).data]; };
+      const background = element => {
+        const chain = []; for (let e = element; e; e = e.parentElement) chain.push(e);
+        return chain.reverse().reduce((base, e) => { const c = rgba(getComputedStyle(e).backgroundColor), a = c[3] / 255; return base.map((v, i) => c[i] * a + v * (1 - a)); }, [0, 0, 0]);
+      };
+      const luminance = color => { const v = color.slice(0, 3).map(x => x / 255).map(x => x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4); return v[0] * .2126 + v[1] * .7152 + v[2] * .0722; };
+      const ratio = (a, b) => (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+      const elements = [...document.querySelectorAll('.main-nav a, .schedule-field span, .schedule-field select, #scheduleFilterButton, #scheduleOperatorStatus, .schedule-card strong, .schedule-card-time, .schedule-card-meta')].filter(e => e.getBoundingClientRect().width && e.getBoundingClientRect().height);
+      const text = elements.map(e => ({ name: e.id || e.className, ratio: ratio(luminance(rgba(getComputedStyle(e).color)), luminance(background(e))) }));
+      const input = document.querySelector("#scheduleDay");
+      const border = ratio(luminance(rgba(getComputedStyle(input).borderColor)), luminance(background(input)));
+      const card = document.querySelector(".schedule-card");card.focus();
+      const focus = ratio(luminance(rgba(getComputedStyle(card).outlineColor)), luminance(background(card)));
+      return { text, border, focus };
+    });
+    const measured = await measureGuideContrast();
+    assert.ok(measured.text.every(e => e.ratio >= 4.5), JSON.stringify(measured));
+    assert.ok(measured.border >= 3 && measured.focus >= 3, JSON.stringify(measured));
+    results.push({ guideContrast: measured });
+    await page.locator("#scheduleFilterButton").hover();
+    const hover = await measureGuideContrast();
+    assert.ok(hover.text.every(e => e.ratio >= 4.5), JSON.stringify(hover));
+    await page.route("**/api/status", route => route.fulfill({ json: { operator: { alive: false }, scheduler: { alive: true } } }));
+    await page.locator("#scheduleRefreshButton").click();
+    await page.waitForFunction(() => document.querySelector("#scheduleOperatorStatus").textContent.includes("停止中"));
+    assert.equal(await page.locator("#scheduleOperatorStatus").isVisible(), true);
+    await page.route("**/api/reserves", route => route.fulfill({ json: [{ ...next, isConflict: true }] }));
+    await page.locator("#scheduleRefreshButton").click();
+    await page.locator("#scheduleConflictSummary").waitFor({ state: "visible" });
+    assert.match(await page.locator("#scheduleConflictSummary").textContent(), /競合 1/);
+    for (const state of ["recording", "reserved", "skip"]) {
+      await page.route("**/api/recording", route => route.fulfill({ json: state === "recording" ? [next] : [] }));
+      await page.route("**/api/reserves", route => route.fulfill({ json: state === "recording" ? [] : [{ ...next, isSkip: state === "skip" }] }));
+      await page.locator("#scheduleRefreshButton").click();
+      await page.waitForFunction(() => !document.querySelector("#scheduleRefreshButton").disabled);
+      const card = page.locator('.schedule-card[data-program-id="movie"]');
+      assert.match(await card.getAttribute("aria-label"), state === "recording" ? /録画中/ : state === "skip" ? /スキップ/ : /予約/);
+      assert.equal(await card.evaluate(e => getComputedStyle(e, "::before").width), "2px");
+    }
+    await page.route("**/api/status", route => route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"運用状態を取得できませんでした"}' }));
+    await page.locator("#scheduleRefreshButton").click();
+    await page.waitForFunction(() => document.querySelector("#scheduleOperatorStatus").textContent.includes("通信エラー"));
+    await page.locator("#scheduleOperatorStatus").click();
+    await page.locator("#scheduleOperationalDetail").waitFor({ state: "visible" });
+    assert.ok((await page.locator("#scheduleOperationalDetail").textContent()).length > 0);
+  } finally { await context.close(); }
+});
+
 test("mobile header keeps the brand and long operational notices readable", async () => {
   for (const width of [320, 375]) {
     const { page, context } = await pageFor({ viewport: { width, height: 812 }, isMobile: true, hasTouch: true });
