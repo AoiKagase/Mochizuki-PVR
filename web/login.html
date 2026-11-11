@@ -8,13 +8,14 @@
   <link rel="icon" type="image/png" href="/favicon.png" sizes="256x256">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101724; color: #eef3fb; }
-    body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: radial-gradient(circle at top, #213a63, #101724 55%); }
-    main { width: min(100% - 2rem, 25rem); padding: 2rem; border: 1px solid #3a4d6b; border-radius: 1rem; background: #172235; box-shadow: 0 1rem 3rem #0008; }
-    h1 { margin: 0 0 .4rem; font-size: 1.55rem; } p { color: #bdc9d9; line-height: 1.55; }
-    form { display: grid; gap: 1rem; margin-top: 1.5rem; min-width: 0; } label { display: grid; gap: .45rem; font-weight: 600; min-width: 0; }
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #111518; color: #eef3fb; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; }
+    main { width: min(100% - 2rem, 25rem); padding: 2rem; border: 1px solid #30383e; border-radius: 1rem; background: #191f23; }
+    h1 { margin: 0 0 .5rem; font-size: 1.5rem; font-weight: 500; } p { color: #b4bdc5; line-height: 1.5; }
+    form { display: grid; gap: 1rem; margin-top: 1.5rem; min-width: 0; } label { display: grid; gap: .5rem; font-weight: 500; min-width: 0; }
     input, button { font: inherit; border-radius: .5rem; padding: .75rem; } input { border: 1px solid #526786; background: #0f1827; color: inherit; }
-    button { border: 0; background: #56a1ff; color: #071321; font-weight: 700; cursor: pointer; } button:disabled { opacity: .65; cursor: wait; }
+    button { border: 0; background: #56a1ff; color: #071321; font-weight: 500; cursor: pointer; } button:hover { background: #85bbff; } button:disabled { opacity: .65; cursor: wait; }
+    input:focus-visible, button:focus-visible { outline: 2px solid #85bbff; outline-offset: 3px; }
     #error { min-height: 1.4em; color: #ffb4ab; margin: .8rem 0 0; }
     input { width: 100%; min-width: 0; } #error { overflow-wrap: anywhere; }
   </style>
@@ -22,7 +23,7 @@
 <body>
   <main>
     <h1>Mochizuki PVR</h1>
-    <p>続行するにはログインしてください。</p>
+    <p>番組表・予約・録画にアクセスするにはログインしてください。</p>
     <form id="loginForm">
       <label>ユーザー名<input id="username" name="username" autocomplete="username" required autofocus></label>
       <label>パスワード<input id="password" name="password" type="password" autocomplete="current-password" required></label>

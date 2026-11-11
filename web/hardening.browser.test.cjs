@@ -203,6 +203,87 @@ test("layout and contrast: desktop and touch, light and dark", async t => {
   }
 });
 
+test("mobile header keeps the brand and long operational notices readable", async () => {
+  for (const width of [320, 375]) {
+    const { page, context } = await pageFor({ viewport: { width, height: 812 }, isMobile: true, hasTouch: true });
+    try {
+      await loaded(page);
+      for (const message of [
+        "オペレータが停止中です。録画を開始するには mochizuki run operator を起動してください",
+        "局ロゴキャッシュをクリアしました（123件）"
+      ]) {
+        const layout = await page.evaluate(message => {
+          const badge = document.querySelector("#statusBadge");
+          badge.textContent = message;
+          const a = document.querySelector(".title-brand").getBoundingClientRect();
+          const b = badge.getBoundingClientRect();
+          return { width: innerWidth, scroll: document.documentElement.scrollWidth, brandWidth: a.width, overlap: a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top, clipped: badge.scrollWidth > badge.clientWidth + 1, text: badge.textContent };
+        }, message);
+        assert.equal(layout.scroll, width, JSON.stringify(layout));
+        assert.ok(layout.brandWidth > 100 && !layout.overlap && !layout.clipped, JSON.stringify(layout));
+        assert.equal(layout.text, message);
+      }
+    } finally { await context.close(); }
+  }
+});
+
+test("guide prioritizes readable titles at every zoom without changing program times", async t => {
+  for (const colorScheme of ["light", "dark"]) await t.test(colorScheme, async () => {
+    const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 }, colorScheme });
+    try {
+      let start = now - 60000;
+      const programs = [5, 15, 30, 60].map(minutes => {
+        const item = { ...program, id: "guide-" + minutes, title: minutes + "分番組の見切れを確認", start, end: start + minutes * 60000, seconds: minutes * 60 };
+        start = item.end;
+        return item;
+      });
+      await page.route("**/api/schedule", route => route.fulfill({ json: [{ channel, programs }] }));
+      await page.route("**/api/recording", route => route.fulfill({ json: [programs[2]] }));
+      await page.route("**/api/reserves", route => route.fulfill({ json: [programs[1]] }));
+      await page.addInitScript(() => localStorage.setItem("mochizuki.scheduleZoomLevel", "wide"));
+      await loaded(page, "schedule");
+      for (const zoom of ["wide", "standard", "detail", "precise"]) {
+        await page.locator('.schedule-guide-grid[data-schedule-zoom="' + zoom + '"]').waitFor();
+        // Lanes are virtualized and populated after the guide shell renders.
+        await page.waitForFunction(() => document.querySelectorAll(".schedule-card").length === 4);
+        const geometry = await page.locator(".schedule-card").evaluateAll(cards => cards.map(card => {
+          const box = card.getBoundingClientRect();
+          const parts = [...card.querySelectorAll(".schedule-card-time, .schedule-card-state, strong, .schedule-card-meta")]
+            .filter(e => getComputedStyle(e).display !== "none")
+            .map(e => { const b = e.getBoundingClientRect(); return { text: e.textContent, top: b.top - box.top, bottom: b.bottom - box.top, height: b.height, scroll: e.scrollHeight }; });
+          return { id: card.dataset.programId, height: box.height, start: card.dataset.start, label: card.getAttribute("aria-label"), parts };
+        }));
+        assert.equal(geometry.length, 4);
+        for (const card of geometry) {
+          const source = programs.find(p => p.id === card.id);
+          assert.equal(Number(card.start), source.start);
+          assert.ok(card.label.includes(source.title), card.label);
+          if (card.id === "guide-30") assert.match(card.label, /録画中/);
+          if (card.id === "guide-15") assert.match(card.label, /自動予約/);
+          // A sub-line-height program can be a colored time marker; its full
+          // accessible name and keyboard details must remain available.
+          for (let i = 0; i < card.parts.length; i++) {
+            const part = card.parts[i];
+            assert.ok(part.top >= 0 && part.bottom <= card.height + 0.5, JSON.stringify({ zoom, card }));
+            assert.ok(part.scroll <= part.height + 1, JSON.stringify({ zoom, part }));
+            if (i) assert.ok(card.parts[i - 1].bottom <= part.top + 0.5, JSON.stringify({ zoom, card }));
+          }
+          if (card.height >= 22) assert.ok(card.parts.some(p => p.text.includes(source.title)), JSON.stringify({ zoom, card }));
+        }
+        if (zoom !== "precise") await page.locator("#scheduleZoomInButton").click();
+      }
+      const first = page.locator('.schedule-card[data-program-id="guide-5"]');
+      await first.focus();
+      await page.keyboard.press("Enter");
+      await page.locator("#programDialog").waitFor({ state: "visible" });
+      assert.match(await page.locator("#programDialogTitle").textContent(), /5分番組/);
+      await page.keyboard.press("Escape");
+      await page.locator("#programDialog").waitFor({ state: "hidden" });
+      assert.equal(await first.evaluate(e => document.activeElement === e), true);
+    } finally { await context.close(); }
+  });
+});
+
 test("login errors preserve input and allow retry without duplicate requests", async t => {
   for (const [status, expected] of [[401, "ユーザー名またはパスワード"], [403, "許可"], [429, "待"], [500, "サーバー"]]) {
     await t.test(String(status), async () => {

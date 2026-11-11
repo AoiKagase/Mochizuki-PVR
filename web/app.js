@@ -5039,8 +5039,11 @@
     var height = Math.round(scheduleCardMinimumHeight(durationHeight));
     card.style.top = top + "px";
     card.style.height = height + "px";
-    card.classList.toggle("short", durationMinutes < 15);
-    card.classList.toggle("very-short", durationMinutes < 8);
+    // Density follows the actual space at the current zoom, not the broadcast
+    // duration. Full details remain in the accessible name and the dialog.
+    card.classList.toggle("compact", height < 88);
+    card.classList.toggle("title-only", height < 48);
+    card.classList.toggle("micro", height < 22);
     card.classList.toggle("selected", isActiveProgram(program));
     card.title = [programFullTitle(program), program.detail || program.description || ""].filter(Boolean).join("\n");
     card.tabIndex = -1;

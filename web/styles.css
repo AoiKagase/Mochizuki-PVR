@@ -1,12 +1,12 @@
 :root {
   color-scheme: light;
-  --bg: oklch(94% 0.006 245);
+  --bg: oklch(97% 0.004 245);
   --ink: oklch(18% 0.018 245);
   --ink-soft: oklch(31% 0.025 230);
   --muted: oklch(43% 0.018 245);
-  --line: oklch(80% 0.012 245);
-  --line-strong: oklch(78% 0.02 230);
-  --line-soft: oklch(84% 0.015 230);
+  --line: oklch(87% 0.008 245);
+  --line-strong: oklch(78% 0.012 230);
+  --line-soft: oklch(90% 0.006 230);
   --panel: oklch(98.5% 0.004 245);
   --panel-strong: oklch(95.5% 0.008 245);
   --panel-schedule: oklch(96% 0.012 235);
@@ -74,9 +74,7 @@
   --shadow-ui: oklch(15% 0.025 230 / 0.14);
   --shadow-drawer: oklch(15% 0.025 230 / 0.18);
   --schedule-backdrop: oklch(18% 0.025 230 / 0.28);
-  --topbar-glow: oklch(52% 0.13 235 / 0.22);
-  --nav-surface: oklch(90.5% 0.008 245);
-  --view-head-surface: linear-gradient(90deg, var(--panel) 0, var(--panel) 62%, var(--panel-schedule) 100%);
+  --nav-surface: var(--panel);
   --schedule-summary-ink: oklch(33% 0.026 230);
   --schedule-card-line: oklch(72% 0.028 235);
   --schedule-card-hover: oklch(97% 0.022 235);
@@ -120,13 +118,13 @@
   --player-fullscreen-surface: oklch(17% 0.022 210 / 0.94);
   --console: var(--brand-strong);
   --console-muted: oklch(82% 0.014 245);
-  --topbar-height: 120px;
+  --topbar-height: 76px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: oklch(14% 0.014 235);
+    --bg: oklch(14% 0.006 235);
     --ink: oklch(94% 0.01 230);
     --ink-soft: oklch(82% 0.018 225);
     --muted: oklch(72% 0.018 225);
@@ -180,9 +178,7 @@
     --shadow-ui: oklch(4% 0.018 230 / 0.42);
     --shadow-drawer: oklch(4% 0.018 230 / 0.54);
     --schedule-backdrop: oklch(4% 0.018 230 / 0.62);
-    --topbar-glow: oklch(70% 0.105 225 / 0.16);
     --nav-surface: oklch(18% 0.016 235);
-    --view-head-surface: linear-gradient(90deg, var(--panel) 0, var(--panel) 62%, var(--panel-schedule) 100%);
     --schedule-summary-ink: oklch(82% 0.02 225);
     --schedule-card-line: oklch(43% 0.035 225);
     --schedule-card-hover: oklch(28% 0.03 225);
@@ -224,7 +220,13 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
   line-height: 1.5;
+}
+
+strong {
+  font-weight: 600;
 }
 
 .screen-reader-only {
@@ -248,7 +250,7 @@ body {
   background: var(--panel);
   color: var(--accent-strong);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
   transform: translateY(-180%);
   transition: transform 150ms ease-out;
 }
@@ -276,7 +278,7 @@ body {
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2;
+  stroke-width: 1.5;
 }
 
 .icon-button {
@@ -301,31 +303,30 @@ body {
   top: 0;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 22px clamp(18px, 4vw, 48px);
-  border-bottom: 3px solid var(--accent);
-  background:
-    linear-gradient(90deg, var(--topbar-glow), transparent 44%),
-    var(--console);
+  padding: 16px clamp(16px, 4vw, 48px);
+  border-bottom: 1px solid var(--console-line);
+  background: var(--console);
   color: var(--brand-ink);
 }
 
 .title-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
 }
 
 .title-brand-icon {
   display: block;
   flex: 0 0 auto;
-  width: 56px;
-  height: 56px;
-  padding: 6px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  padding: 4px;
+  border-radius: 8px;
   background: #f7fbff;
   object-fit: contain;
 }
@@ -341,7 +342,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
   padding: 0 clamp(14px, 3vw, 40px);
   border-bottom: 1px solid var(--line);
@@ -396,11 +397,11 @@ body {
 .main-nav a {
   display: block;
   flex: 0 0 auto;
-  padding: 13px 15px 11px;
-  border-bottom: 3px solid transparent;
+  padding: 12px 16px;
+  border-bottom: 2px solid transparent;
   color: var(--ink-soft);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -434,7 +435,7 @@ body {
   border-right: 1px solid var(--line);
   color: var(--schedule-summary-ink);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .schedule-status-pill {
@@ -482,7 +483,7 @@ body {
 .schedule-nav-controls label {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 500;
 }
 
 .schedule-nav-controls select {
@@ -528,7 +529,7 @@ body {
   min-height: 36px;
   color: var(--accent-strong);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -547,7 +548,7 @@ body {
   background: var(--surface-quiet);
   color: var(--ink-soft);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 500;
   text-align: center;
 }
 
@@ -558,56 +559,74 @@ p {
 }
 
 h1 {
-  font-size: 32px;
-  font-weight: 850;
-  letter-spacing: -0.02em;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 h2 {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 500;
 }
 
 h3 {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 700;
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .topbar p {
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--console-muted);
-  font-size: 14px;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-badge {
-  min-width: 132px;
-  padding: 9px 13px;
-  border: 1px solid var(--console-line);
-  border-radius: 6px;
-  background: var(--console-surface);
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 4px 0;
   color: var(--console-ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
   text-align: center;
 }
 
 .status-badge.ok {
-  border-color: var(--success);
-  background: var(--success-soft);
-  color: var(--success-strong);
+  color: var(--console-ink);
 }
 
 .status-badge.error {
-  border-color: var(--error);
-  background: var(--error-soft);
-  color: var(--error-strong);
+  color: var(--console-ink);
+}
+
+.status-badge::before {
+  content: "";
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--console-muted);
+}
+
+.status-badge.ok::before {
+  background: oklch(76% 0.1 165);
+}
+
+.status-badge.error::before {
+  background: oklch(76% 0.12 28);
 }
 
 .workspace {
-  width: min(1280px, 100%);
+  width: min(1440px, 100%);
   margin: 0 auto;
-  padding: 22px clamp(14px, 3vw, 40px) 40px;
+  padding: 24px clamp(16px, 3vw, 40px) 40px;
 }
 
 .view-schedule .workspace {
@@ -626,12 +645,10 @@ h3 {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 14px;
-  padding: 18px 20px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--view-head-surface);
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--line);
 }
 
 .view-head p {
@@ -644,7 +661,7 @@ h3 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: 14px;
+  gap: 16px;
 }
 
 .dashboard-grid {
@@ -656,9 +673,9 @@ h3 {
 
 .panel {
   min-height: 260px;
-  padding: 16px;
+  padding: 20px;
   border: 1px solid var(--line-soft);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--panel);
 }
 
@@ -711,8 +728,8 @@ h3 {
 }
 
 .live-channel-list:not(.empty) {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
-  gap: 0 18px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 0 24px;
   margin-top: 8px;
 }
 
@@ -721,7 +738,7 @@ h3 {
   grid-template-columns: minmax(108px, 150px) minmax(0, 1fr) 72px auto;
   align-items: center;
   gap: 6px;
-  min-height: 34px;
+  min-height: 44px;
   padding: 4px 0;
   border-bottom: 1px solid var(--line);
 }
@@ -771,7 +788,7 @@ h3 {
   overflow: hidden;
   color: var(--ink-secondary);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -840,7 +857,7 @@ h3 {
   background: transparent;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 500;
 }
 
 .view-toggle-button:hover {
@@ -856,8 +873,8 @@ h3 {
 }
 
 .view-toggle-button .icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .schedule-controls {
@@ -876,7 +893,7 @@ h3 {
 .control-field span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 select {
@@ -900,7 +917,7 @@ button {
   color: var(--accent-ink);
   font: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -985,7 +1002,7 @@ summary:focus-visible,
   background: var(--surface-control-soft);
   color: var(--ink);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -999,7 +1016,7 @@ summary:focus-visible,
   display: grid;
   gap: 4px;
   min-height: 58px;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1033,13 +1050,13 @@ summary:focus-visible,
 
 .program-row.compact-actions {
   min-height: 0;
-  padding: 7px 0;
+  padding: 8px 0;
 }
 
 .program-row.compact-actions .program-row-body {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 2px 10px;
+  gap: 4px 12px;
 }
 
 .program-row.compact-actions .program-title-button {
@@ -1076,26 +1093,24 @@ summary:focus-visible,
   background: var(--surface-muted);
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .program-row.preview-unavailable {
-  padding-right: 10px;
-  padding-left: 10px;
-  border-radius: 6px;
-  background: color-mix(in oklch, var(--error-soft) 42%, var(--panel));
+  padding-right: 12px;
+  padding-left: 12px;
+  border-left: 2px solid var(--warn);
+  border-radius: 4px;
+  background: var(--surface-quiet);
 }
 
 .recorded-preview-warning {
   justify-self: start;
   width: fit-content;
-  padding: 2px 7px;
-  border: 1px solid color-mix(in oklch, var(--error-strong) 30%, var(--panel));
-  border-radius: 999px;
-  background: var(--error-soft);
-  color: var(--error-strong);
+  padding: 2px 0;
+  color: var(--warn-strong);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.35;
 }
 
@@ -1118,7 +1133,7 @@ summary:focus-visible,
   background: transparent;
   color: var(--ink);
   font-size: 14px;
-  font-weight: 750;
+  font-weight: 500;
   text-align: left;
   overflow-wrap: anywhere;
 }
@@ -1147,8 +1162,8 @@ summary:focus-visible,
   border-radius: 4px;
   background: var(--surface-control-soft);
   color: var(--ink-soft) !important;
-  font-size: 10px !important;
-  font-weight: 850;
+  font-size: 11px !important;
+  font-weight: 500;
   line-height: 1.1;
   white-space: nowrap;
 }
@@ -1207,7 +1222,7 @@ summary:focus-visible,
   background: var(--panel-strong);
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -1219,7 +1234,7 @@ summary:focus-visible,
 
 .recorded-list--tile {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .recorded-list--tile .program-row {
@@ -1302,7 +1317,7 @@ summary:focus-visible,
 
 .rule-row .rule-validation-error {
   color: var(--error-strong);
-  font-weight: 750;
+  font-weight: 500;
 }
 
 .rule-row .row-actions {
@@ -1382,7 +1397,7 @@ summary:focus-visible,
   background: var(--reserved-soft);
   color: var(--reserved-strong);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 500;
   line-height: 1.2;
 }
 
@@ -1437,7 +1452,7 @@ summary:focus-visible,
   background: transparent;
   color: var(--accent);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 500;
   text-align: left;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -1450,7 +1465,7 @@ summary:focus-visible,
 
 .schedule-list {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   margin-top: 12px;
 }
 
@@ -1498,7 +1513,7 @@ summary:focus-visible,
   background: var(--schedule-grid-head);
   color: var(--ink);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 500;
 }
 
 .schedule-corner {
@@ -1581,7 +1596,7 @@ summary:focus-visible,
   border-top: 1px solid var(--schedule-grid-line);
   color: var(--muted);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 18px;
 }
 
@@ -1603,23 +1618,15 @@ summary:focus-visible,
   right: 2px;
   display: grid;
   align-content: start;
-  gap: 0;
+  gap: 2px;
   min-height: 0;
   overflow: hidden;
-  padding: 3px 5px;
+  padding: 4px 8px;
   border: 1px solid var(--schedule-card-line);
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--panel-schedule);
   color: var(--ink);
   cursor: pointer;
-}
-
-.schedule-card.short {
-  padding: 2px 4px;
-}
-
-.schedule-card.very-short {
-  padding-block: 0;
 }
 
 .schedule-card:hover {
@@ -1630,8 +1637,13 @@ summary:focus-visible,
 
 .schedule-card.selected {
   z-index: 5;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--schedule-selected-ring);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.schedule-card:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .schedule-card.category-anime {
@@ -1684,21 +1696,21 @@ summary:focus-visible,
 }
 
 .schedule-card.recording {
-  border: 2px solid var(--error);
+  border-color: var(--error);
   background: var(--error-soft);
-  box-shadow: 0 0 0 2px var(--recording-ring);
+  box-shadow: inset 3px 0 var(--error);
 }
 
 .schedule-card.reserved {
-  border: 2px solid var(--reserved);
+  border-color: var(--reserved);
   background: var(--reserved-soft);
-  box-shadow: 0 0 0 2px var(--reserved-ring);
+  box-shadow: inset 3px 0 var(--reserved);
 }
 
 .schedule-card.conflict {
-  border: 2px solid var(--warn);
+  border-color: var(--warn);
   background: var(--warn-soft);
-  box-shadow: 0 0 0 2px var(--conflict-ring);
+  box-shadow: inset 3px 0 var(--warn);
 }
 
 .schedule-card.skip {
@@ -1711,7 +1723,7 @@ summary:focus-visible,
   left: 0;
   right: 0;
   z-index: 3;
-  border-top: 3px solid var(--error);
+  border-top: 2px solid var(--error);
   pointer-events: none;
 }
 
@@ -1720,7 +1732,7 @@ summary:focus-visible,
   overflow: hidden;
   color: var(--ink-soft);
   font-size: 11px;
-  line-height: 1.15;
+  line-height: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1728,15 +1740,14 @@ summary:focus-visible,
 .schedule-card-state {
   justify-self: start;
   max-width: 100%;
-  margin-bottom: 1px;
-  padding: 1px 4px;
+  padding: 0 4px;
   border: 1px solid var(--reserved);
   border-radius: 3px;
   background: var(--reserved-strong);
   color: var(--schedule-state-ink);
   font-size: 11px;
-  font-weight: 800;
-  line-height: 1.1;
+  font-weight: 500;
+  line-height: 16px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1763,16 +1774,18 @@ summary:focus-visible,
 .schedule-card strong {
   display: flex;
   align-items: flex-start;
-  gap: 3px;
+  gap: 4px;
+  min-height: 16px;
   overflow: hidden;
   font-size: 12px;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
+  line-height: 16px;
+  white-space: nowrap;
 }
 
 .schedule-card .program-title-label {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .schedule-card .program-flag-badge {
@@ -1780,38 +1793,25 @@ summary:focus-visible,
   min-height: 14px;
   padding: 0 3px;
   border-radius: 2px;
-  font-size: 10px !important;
+  font-size: 11px !important;
 }
 
-.schedule-card.short strong {
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.schedule-card.very-short .schedule-card-time,
-.schedule-card.very-short .schedule-card-meta {
+.schedule-card.compact .schedule-card-state,
+.schedule-card.compact .schedule-card-meta,
+.schedule-card.title-only .schedule-card-time {
   display: none;
 }
 
-.schedule-guide-grid[data-schedule-zoom="wide"] .schedule-card,
-.schedule-guide-grid[data-schedule-zoom="standard"] .schedule-card {
-  border-radius: 2px;
+.schedule-card.title-only {
+  padding: 2px 4px;
 }
 
-.schedule-guide-grid[data-schedule-zoom="wide"] .schedule-card.short,
-.schedule-guide-grid[data-schedule-zoom="standard"] .schedule-card.short {
-  padding: 0 4px;
+.schedule-card.micro {
+  padding: 0;
 }
 
-.schedule-guide-grid[data-schedule-zoom="wide"] .schedule-card.short strong,
-.schedule-guide-grid[data-schedule-zoom="standard"] .schedule-card.short strong {
-  font-size: 11px;
-  line-height: 1.1;
-}
-
-.schedule-guide-grid[data-schedule-zoom="detail"] .schedule-card.short strong,
-.schedule-guide-grid[data-schedule-zoom="precise"] .schedule-card.short strong {
-  font-size: 12px;
+.schedule-card.micro > * {
+  display: none;
 }
 
 .channel-actions {
@@ -1940,7 +1940,7 @@ summary:focus-visible,
   overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .program-dialog-preview {
@@ -1969,7 +1969,7 @@ summary:focus-visible,
 .program-dialog-preview-figure figcaption {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .program-dialog-alert {
@@ -1979,7 +1979,7 @@ summary:focus-visible,
   background: var(--error-soft);
   color: var(--error-strong);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.5;
 }
 
@@ -2084,7 +2084,7 @@ summary:focus-visible,
   background: var(--player-control-surface);
   color: var(--player-ink);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -2128,7 +2128,7 @@ summary:focus-visible,
   color: var(--player-ink-soft);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  font-weight: 750;
+  font-weight: 500;
   text-align: center;
   white-space: nowrap;
 }
@@ -2169,7 +2169,7 @@ summary:focus-visible,
 .player-setting-field span {
   color: var(--player-ink-soft);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .player-setting-field select {
@@ -2335,7 +2335,7 @@ video:-webkit-full-screen {
   grid-column: 1 / -1;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .filename-format-field {
@@ -2383,7 +2383,7 @@ video:-webkit-full-screen {
   width: fit-content;
   color: var(--accent-strong);
   cursor: pointer;
-  font-weight: 750;
+  font-weight: 500;
 }
 
 .filename-format-token-list {
@@ -2404,7 +2404,7 @@ video:-webkit-full-screen {
 
 .filename-format-token-list dt {
   color: var(--ink);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .filename-format-token-list dd {
@@ -2429,7 +2429,7 @@ video:-webkit-full-screen {
 .config-form .field-error {
   color: var(--error-strong);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -2441,7 +2441,7 @@ video:-webkit-full-screen {
   background: var(--error-soft);
   color: var(--error-strong);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.5;
 }
 
@@ -2458,7 +2458,7 @@ video:-webkit-full-screen {
 .rule-builder span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .rule-builder select[multiple] {
@@ -2555,7 +2555,7 @@ body.view-status .settings-list {
 .panel-head p {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .pie-chart,
@@ -2597,7 +2597,7 @@ body.view-status .settings-list {
   margin-top: 4px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .metric-svg {
@@ -2634,7 +2634,7 @@ body.view-status .settings-list {
 .chart-label {
   fill: var(--muted);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .chart-legend {
@@ -2645,7 +2645,7 @@ body.view-status .settings-list {
   margin-top: 10px;
   color: var(--ink);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .line-chart .chart-legend {
@@ -2689,7 +2689,7 @@ body.view-status .settings-list {
 .chart-empty {
   color: var(--muted);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 body.view-settings .settings-grid {
@@ -2700,7 +2700,7 @@ body.view-settings .settings-grid {
   margin-top: 4px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .config-form-panel {
@@ -2727,7 +2727,7 @@ body.view-settings .settings-grid {
   padding: 0;
   color: var(--ink);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .config-toggle {
@@ -2781,7 +2781,7 @@ body.view-settings .settings-grid {
 }
 
 .post-process-command-title {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .post-process-command label {
@@ -2825,7 +2825,7 @@ body.view-settings .settings-grid {
 .post-process-help summary {
   color: var(--ink);
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .post-process-help p {
@@ -2871,7 +2871,7 @@ body.view-settings .settings-grid {
 .config-user-row label span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .config-user-row .icon-button {
@@ -2958,7 +2958,7 @@ body.view-settings .settings-grid {
   min-width: 0;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .config-form select {
@@ -3013,7 +3013,7 @@ body.view-settings .settings-grid {
   align-self: center;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -3055,7 +3055,7 @@ body.view-settings .settings-grid {
   min-width: 128px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
   text-align: center;
   white-space: nowrap;
 }
@@ -3101,7 +3101,7 @@ body.view-settings .settings-grid {
 .settings-list dt {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .settings-list dd {
@@ -3122,13 +3122,13 @@ body.view-settings .settings-grid {
   }
 
   .title-brand h1 {
-    font-size: clamp(24px, 4vw, 32px);
+    font-size: 20px;
   }
 
   .topbar {
     position: static;
-    align-items: flex-start;
-    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
   }
 
   .main-nav {
@@ -3138,7 +3138,7 @@ body.view-settings .settings-grid {
 
   .view-head {
     flex-direction: column;
-    padding: 14px;
+    padding: 0 0 16px;
   }
 
   .content-grid {
@@ -3154,8 +3154,7 @@ body.view-settings .settings-grid {
   }
 
   .status-badge {
-    width: 100%;
-    text-align: left;
+    font-size: 12px;
   }
 
   .log-grid {
@@ -3326,7 +3325,7 @@ body.view-settings .settings-grid {
     padding: 10px;
     color: var(--ink);
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 500;
     text-decoration: none;
   }
 
@@ -3885,7 +3884,7 @@ body.view-schedule .schedule-zoom-controls {
     padding-bottom: 8px;
     color: var(--muted);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 500;
     white-space: nowrap;
   }
 
