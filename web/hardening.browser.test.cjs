@@ -330,6 +330,45 @@ test("guide watch stays inline and channel names still search", async () => {
   } finally { await context.close(); }
 });
 
+test("guide logos load directly and after navigation without hidden or offscreen images blocking the queue", async t => {
+  for (const width of [375, 1440]) await t.test(String(width), async () => {
+    const { page, context } = await pageFor({ viewport: { width, height: 900 }, colorScheme: 'dark' });
+    try {
+      const channels = Array.from({ length: 18 }, (_, i) => ({ ...channel, id: 'logo-' + i, name: '局ロゴ確認' + i, hasLogoData: true }));
+      const entries = channels.map(c => ({ channel: c, programs: [{ ...program, id: c.id + '-program', channel: c }] }));
+      await page.route('**/api/schedule', route => route.fulfill({ json: entries }));
+      await page.route('**/api/schedule/broadcasting', route => route.fulfill({ json: entries.map(e => e.programs[0]) }));
+      const requests = [];
+      const png = fs.readFileSync(path.join(__dirname, 'favicon.png'));
+      await page.route('**/api/channel/*/logo', route => { requests.push(route.request().url()); return route.fulfill({ contentType: 'image/png', body: png }); });
+      await loaded(page, 'schedule');
+      await page.waitForFunction(() => {
+        const image = document.querySelector('.schedule-channel-logo');
+        return image && image.complete && image.naturalWidth > 0;
+      });
+      assert.ok(requests.length < channels.length, 'offscreen and hidden logos should not start requests');
+      const image = page.locator('.schedule-channel-logo').first();
+      const geometry = await image.evaluate(e => ({ width: e.getBoundingClientRect().width, height: e.getBoundingClientRect().height, heading: e.closest('.schedule-channel-head').getBoundingClientRect().height }));
+      assert.ok(geometry.width > 0 && geometry.height > 0 && geometry.heading === 52, JSON.stringify(geometry));
+      if (width >= 1024) {
+        await page.locator('.schedule-guide-scroll').evaluate(e => { e.scrollLeft = e.scrollWidth; });
+        await page.waitForFunction(() => {
+          const image = document.querySelector('.schedule-channel-logo[data-channel-id="logo-17"]');
+          return image && image.complete && image.naturalWidth > 0;
+        });
+      } else await page.locator('#scheduleMenuButton').click();
+      await page.locator('a[data-view-link="dashboard"]').click();
+      await page.locator('.live-channel-logo').first().scrollIntoViewIfNeeded();
+      await page.waitForFunction(() => [...document.querySelectorAll('.live-channel-logo')].some(e => e.complete && e.naturalWidth > 0));
+      await page.locator('a[data-view-link="schedule"]').click();
+      await page.waitForFunction(() => {
+        const images = [...document.querySelectorAll('.schedule-channel-logo')];
+        return images.some(e => e.getBoundingClientRect().left < innerWidth && e.getBoundingClientRect().right > 0 && e.complete && e.naturalWidth > 0);
+      });
+    } finally { await context.close(); }
+  });
+});
+
 test("graphite guide preserves genre strips, status names and readable text", async () => {
   const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 }, colorScheme: "dark" });
   try {

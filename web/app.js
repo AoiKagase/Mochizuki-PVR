@@ -71,6 +71,7 @@
   var channelLogoLoadsInFlight = 0;
   var channelLogoLoadScheduled = false;
   var channelLogoLoadConcurrency = 1;
+  var channelLogoVisibilityObserver = null;
   var mochizukiConfigFormDirty = false;
   var mp4VideoEncodersLoaded = false;
   var focusableControlSelector = "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])";
@@ -2308,11 +2309,22 @@
   }
 
   function drainChannelLogoLoadQueue() {
-    while (channelLogoLoadsInFlight < channelLogoLoadConcurrency && channelLogoLoadQueue.length) {
+    var remaining = channelLogoLoadQueue.length;
+    while (channelLogoLoadsInFlight < channelLogoLoadConcurrency && remaining > 0 && channelLogoLoadQueue.length) {
+      remaining--;
       var entry = channelLogoLoadQueue.shift();
       var logo = entry.logo;
       if (!logo.isConnected || entry.cacheVersion !== state.logoCacheVersion) {
+        if (channelLogoVisibilityObserver) channelLogoVisibilityObserver.unobserve(logo);
         continue;
+      }
+      if (channelLogoVisibilityObserver) {
+        var rect = logo.getBoundingClientRect();
+        if (!rect.width || !rect.height || rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth) {
+          channelLogoLoadQueue.push(entry);
+          continue;
+        }
+        channelLogoVisibilityObserver.unobserve(logo);
       }
       channelLogoLoadsInFlight++;
       var settle = function (available) {
@@ -2342,7 +2354,9 @@
     logo.dataset.logoCacheVersion = String(state.logoCacheVersion);
     logo.width = 44;
     logo.height = 24;
-    logo.loading = "lazy";
+    // This queue owns visibility and concurrency. Native lazy loading can keep
+    // a hidden image pending forever while it occupies the only request slot.
+    logo.loading = "eager";
     logo.decoding = "async";
     logo.setAttribute("aria-busy", "true");
     if ("fetchPriority" in logo) {
@@ -2353,6 +2367,20 @@
       url: channelLogoURL(channelID),
       cacheVersion: state.logoCacheVersion
     });
+    if (typeof window.IntersectionObserver === "function") {
+      if (!channelLogoVisibilityObserver) {
+        channelLogoVisibilityObserver = new window.IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.target.isConnected) {
+              channelLogoVisibilityObserver.unobserve(entry.target);
+            } else if (entry.isIntersecting) {
+              scheduleChannelLogoLoad();
+            }
+          });
+        });
+      }
+      channelLogoVisibilityObserver.observe(logo);
+    }
     scheduleChannelLogoLoad();
     return logo;
   }
