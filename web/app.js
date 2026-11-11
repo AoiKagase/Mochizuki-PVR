@@ -882,6 +882,17 @@
     return String(program && (program.category || program.genre || "") || "");
   }
 
+  function categoryLabel(category) {
+    var labels = {
+      news: "ニュース・報道", sports: "スポーツ", information: "情報・ワイドショー",
+      drama: "ドラマ", music: "音楽", variety: "バラエティ", movie: "映画", cinema: "映画",
+      anime: "アニメ・特撮", documentary: "ドキュメンタリー・教養", theater: "劇場・公演",
+      hobby: "趣味・教育", welfare: "福祉", etc: "その他"
+    };
+    var value = String(category || "");
+    return Object.prototype.hasOwnProperty.call(labels, value.toLowerCase()) ? labels[value.toLowerCase()] : value || "未分類";
+  }
+
   function renderProgramCategoryChip(program) {
     var category = programCategory(program);
     if (!category) {
@@ -889,8 +900,8 @@
     }
     var chip = document.createElement("span");
     chip.className = "program-category-chip" + categoryClass(category);
-    chip.textContent = category;
-    chip.title = "ジャンル: " + category;
+    chip.textContent = categoryLabel(category);
+    chip.title = "ジャンル: " + categoryLabel(category);
     return chip;
   }
 
@@ -936,6 +947,7 @@
       program && program.detail,
       program && program.description,
       programCategory(program),
+      categoryLabel(programCategory(program)),
       channelName(program || {}),
       programChannelID(program || {}),
       programChannelType(program || {})
@@ -1196,7 +1208,7 @@
     listCategories(items).forEach(function (category) {
       var option = document.createElement("option");
       option.value = category;
-      option.textContent = category;
+      option.textContent = categoryLabel(category);
       select.appendChild(option);
     });
     if (current && !Array.prototype.some.call(select.options, function (option) {
@@ -4089,12 +4101,12 @@
     return program.end || (program.start + scheduleMinimumProgramMinutes * 60 * 1000);
   }
 
-  function scheduleCurrentTimeScrollTop(scroll, firstStart, lastEnd, minuteHeight, now) {
+  function scheduleCurrentTimeScrollTop(scroll, firstStart, lastEnd, timeline, now) {
     if (!scroll || now < firstStart || now > lastEnd) {
       return null;
     }
-    var lineTop = Math.round(((now - firstStart) / 60000) * minuteHeight);
-    var headerHeight = 76;
+    var lineTop = timeline.position(now);
+    var headerHeight = 52;
     var visibleTimelineHeight = Math.max(0, scroll.clientHeight - headerHeight);
     var leadingContext = Math.round(visibleTimelineHeight * 0.35);
     return Math.max(0, lineTop - leadingContext);
@@ -4107,14 +4119,52 @@
     return scheduleWindowHoursByMode.all;
   }
 
-  function scheduleCardMinimumHeight(durationHeight) {
-    if (state.scheduleZoomLevel === "precise") {
-      return Math.max(24, durationHeight);
+  function createScheduleTimeline(channelGroups, firstStart, lastEnd, minuteHeight) {
+    // A shared, monotonic time axis gives every program one readable line
+    // without covering its neighbour or misaligning simultaneous broadcasts.
+    var boundaries = new Map([[firstStart, []], [lastEnd, []]]);
+    for (var hour = firstStart; hour <= lastEnd; hour += 3600000) {
+      boundaries.set(hour, []);
     }
-    if (state.scheduleZoomLevel === "detail") {
-      return Math.max(12, durationHeight);
+    channelGroups.forEach(function (group) {
+      group.programs.forEach(function (program) {
+        var start = program.start;
+        var end = programEnd(program);
+        if (end <= start) {
+          return;
+        }
+        if (!boundaries.has(start)) boundaries.set(start, []);
+        if (!boundaries.has(end)) boundaries.set(end, []);
+        boundaries.get(end).push(start);
+      });
+    });
+    var times = Array.from(boundaries.keys()).sort(function (a, b) { return a - b; });
+    var positions = [];
+    var byTime = new Map();
+    times.forEach(function (time, index) {
+      var position = index ? positions[index - 1] + (time - times[index - 1]) / 60000 * minuteHeight : 0;
+      boundaries.get(time).forEach(function (start) {
+        position = Math.max(position, byTime.get(start) + 24);
+      });
+      positions.push(position);
+      byTime.set(time, position);
+    });
+    function interpolate(value, source, target) {
+      if (value <= source[0]) return target[0];
+      if (value >= source[source.length - 1]) return target[target.length - 1];
+      var low = 0;
+      var high = source.length - 1;
+      while (high - low > 1) {
+        var middle = Math.floor((low + high) / 2);
+        if (source[middle] <= value) low = middle;
+        else high = middle;
+      }
+      return target[low] + (value - source[low]) / (source[high] - source[low]) * (target[high] - target[low]);
     }
-    return durationHeight;
+    return {
+      position: function (time) { return Math.round(interpolate(time, times, positions)); },
+      timeAt: function (position) { return interpolate(position, positions, times); }
+    };
   }
 
   function syncScheduleZoomControls() {
@@ -4142,11 +4192,14 @@
       return;
     }
     var scroll = document.querySelector(".schedule-guide-scroll");
-    var minuteOffset = scroll ? scroll.scrollTop / scheduleMinutePixels() : 0;
+    var anchorTime = scroll && scroll.scheduleTimeline ? scroll.scheduleTimeline.timeAt(scroll.scrollTop) : null;
     state.scheduleZoomLevel = scheduleZoomLevels[nextIndex].id;
     saveScheduleZoomLevel();
-    state.scheduleGuideScroll.top = Math.round(minuteOffset * scheduleMinutePixels());
     renderSchedule();
+    var nextScroll = document.querySelector(".schedule-guide-scroll");
+    if (anchorTime !== null && nextScroll && nextScroll.scheduleTimeline) {
+      state.scheduleGuideScroll.top = nextScroll.scheduleTimeline.position(anchorTime);
+    }
     syncScheduleZoomControls();
   }
 
@@ -4335,7 +4388,7 @@
       state.searchCategories.forEach(function (value) {
         var option = document.createElement("option");
         option.value = value;
-        option.textContent = value;
+        option.textContent = categoryLabel(value);
         category.appendChild(option);
       });
       category.value = currentCategory;
@@ -4593,6 +4646,7 @@
     details.className = "schedule-list-alternative";
     var summary = document.createElement("summary");
     summary.textContent = "番組一覧（" + programs.length + "件）";
+    summary.title = summary.textContent;
     details.appendChild(summary);
 
     var searchControls = document.createElement("div");
@@ -4667,6 +4721,13 @@
         return;
       }
       resetList();
+    });
+    details.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && details.open) {
+        event.preventDefault();
+        details.open = false;
+        summary.focus();
+      }
     });
     searchInput.addEventListener("input", function () {
       if (details.open) {
@@ -4809,14 +4870,14 @@
     }
     firstStart = Math.floor(firstStart / 3600000) * 3600000;
     lastEnd = Math.ceil(lastEnd / 3600000) * 3600000;
-    var totalMinutes = Math.max(60, Math.round((lastEnd - firstStart) / 60000));
-    var guideHeight = Math.max(360, Math.round(totalMinutes * minuteHeight));
+    var timeline = createScheduleTimeline(channelGroups, firstStart, lastEnd, minuteHeight);
+    var guideHeight = Math.max(360, timeline.position(lastEnd));
 
     root.className = "schedule-guide";
     var help = document.createElement("p");
     help.id = "scheduleGuideHelp";
     help.className = "screen-reader-only";
-    help.textContent = "番組はチャンネルごとに並びます。各番組の読み上げには放送日時、チャンネル、状態が含まれます。Tabキーで番組表へ移動し、矢印キーで番組を選び、Enterキーで詳細を開きます。タッチ操作では番組一覧も利用できます。";
+    help.textContent = "番組はチャンネルごとに並びます。短い番組も読めるよう時間軸の高さを調整しています。各番組の読み上げには放送日時、チャンネル、状態が含まれます。Tabキーで番組表へ移動し、矢印キーで番組を選び、Enterキーで詳細を開きます。タッチ操作では番組一覧も利用できます。";
     root.appendChild(help);
     var scroll = document.createElement("div");
     scroll.className = "schedule-guide-scroll";
@@ -4824,6 +4885,7 @@
     scroll.setAttribute("aria-label", "番組表");
     scroll.setAttribute("aria-describedby", help.id);
     scroll.tabIndex = 0;
+    scroll.scheduleTimeline = timeline;
     var virtualLanes = [];
     var virtualRenderFrame = 0;
     var virtualWindowStart = -1;
@@ -4832,7 +4894,7 @@
     var virtualHorizontalEnd = -1;
 
     function renderVisibleScheduleLanes() {
-      var headerHeight = 76;
+      var headerHeight = 52;
       var overscan = Math.max(320, Math.round(scroll.clientHeight * 0.35));
       var visibleTop = Math.max(0, scroll.scrollTop - headerHeight);
       var visibleBottom = visibleTop + Math.max(scroll.clientHeight, 360);
@@ -4867,7 +4929,7 @@
         var high = programs.length;
         while (low < high) {
           var middle = Math.floor((low + high) / 2);
-          var middleTop = Math.max(0, Math.round(((programs[middle].start - firstStart) / 60000) * minuteHeight));
+          var middleTop = timeline.position(programs[middle].start);
           if (middleTop < nextWindowStart) {
             low = middle + 1;
           } else {
@@ -4875,22 +4937,28 @@
           }
         }
         lane.innerHTML = "";
+        for (var mark = Math.ceil(timeline.timeAt(nextWindowStart) / 3600000) * 3600000; mark <= lastEnd && timeline.position(mark) <= nextWindowEnd; mark += 3600000) {
+          var hourLine = document.createElement("div");
+          hourLine.className = "schedule-hour-line";
+          hourLine.style.top = timeline.position(mark) + "px";
+          lane.appendChild(hourLine);
+        }
         for (var index = Math.max(0, low - 1); index < programs.length; index += 1) {
           var program = programs[index];
-          var top = Math.max(0, Math.round(((program.start - firstStart) / 60000) * minuteHeight));
-          var bottom = top + Math.max(1, Math.round(((programEnd(program) - program.start) / 60000) * minuteHeight));
+          var top = timeline.position(program.start);
+          var bottom = timeline.position(programEnd(program));
           if (top > nextWindowEnd) {
             break;
           }
           if (bottom >= nextWindowStart) {
-            lane.appendChild(renderScheduleCard(program, firstStart, minuteHeight, record.lane.dataset.scheduleChannelIndex));
+            lane.appendChild(renderScheduleCard(program, timeline, record.lane.dataset.scheduleChannelIndex));
           }
         }
         var now = Date.now();
-        if (now >= firstStart && now <= lastEnd && now >= firstStart + (nextWindowStart / minuteHeight) * 60000 && now <= firstStart + (nextWindowEnd / minuteHeight) * 60000) {
+        if (now >= firstStart && now <= lastEnd && timeline.position(now) >= nextWindowStart && timeline.position(now) <= nextWindowEnd) {
           var line = document.createElement("div");
           line.className = "schedule-now-line";
-          line.style.top = Math.round(((now - firstStart) / 60000) * minuteHeight) + "px";
+          line.style.top = timeline.position(now) + "px";
           lane.appendChild(line);
         }
       });
@@ -4932,6 +5000,7 @@
     var corner = document.createElement("div");
     corner.className = "schedule-corner";
     corner.textContent = "時刻";
+    corner.title = "短い番組も読めるよう時間軸の高さを調整しています";
     grid.appendChild(corner);
 
     channelGroups.forEach(function (group) {
@@ -4953,7 +5022,7 @@
     timeRail.style.height = guideHeight + "px";
     for (var mark = firstStart; mark <= lastEnd; mark += 3600000) {
       var label = document.createElement("span");
-      label.style.top = Math.round(((mark - firstStart) / 60000) * minuteHeight) + "px";
+      label.style.top = timeline.position(mark) + "px";
       label.textContent = formatTime(mark);
       timeRail.appendChild(label);
     }
@@ -4974,7 +5043,7 @@
     window.setTimeout(function () {
       var scrollTop = state.scheduleGuideScroll.top || 0;
       if (state.scheduleGuideScrollToCurrentTime) {
-        var currentTimeScrollTop = scheduleCurrentTimeScrollTop(scroll, firstStart, lastEnd, minuteHeight, Date.now());
+        var currentTimeScrollTop = scheduleCurrentTimeScrollTop(scroll, firstStart, lastEnd, timeline, Date.now());
         if (currentTimeScrollTop !== null) {
           scrollTop = currentTimeScrollTop;
           state.scheduleGuideScroll.top = scrollTop;
@@ -5112,7 +5181,7 @@
     })[0] || null;
   }
 
-  function renderScheduleCard(program, timelineStart, minuteHeight, channelIndex) {
+  function renderScheduleCard(program, timeline, channelIndex) {
     program = decorateProgramState(program);
     var card = document.createElement("article");
     var stateLabel = programStateLabelText(program);
@@ -5123,17 +5192,14 @@
     card.classList.toggle("skip", Boolean(program.isSkip));
     card.classList.toggle("has-state", Boolean(stateLabel));
     var end = programEnd(program);
-    var durationMinutes = Math.max(1, (end - program.start) / 60000);
-    var top = Math.max(0, Math.round(((program.start - timelineStart) / 60000) * minuteHeight));
-    var durationHeight = Math.max(1, Math.round(durationMinutes * minuteHeight));
-    var height = Math.round(scheduleCardMinimumHeight(durationHeight));
+    var top = timeline.position(program.start);
+    var height = Math.max(24, timeline.position(end) - top);
     card.style.top = top + "px";
     card.style.height = height + "px";
     // Density follows the actual space at the current zoom, not the broadcast
     // duration. Full details remain in the accessible name and the dialog.
     card.classList.toggle("compact", height < 88);
     card.classList.toggle("title-only", height < 48);
-    card.classList.toggle("micro", height < 22);
     card.classList.toggle("selected", isActiveProgram(program));
     card.title = [programFullTitle(program), program.detail || program.description || ""].filter(Boolean).join("\n");
     card.tabIndex = -1;
@@ -5145,7 +5211,7 @@
       programFullTitle(program),
       formatTime(program.start) + "から" + formatTime(end),
       channelName(program),
-      program.category || "未分類",
+      categoryLabel(programCategory(program)),
       programFlagNames(program).join(" "),
       stateLabel,
       "の詳細を開く"
@@ -5167,7 +5233,7 @@
 
     var meta = document.createElement("span");
     meta.className = "schedule-card-meta";
-    meta.textContent = [program.category || "未分類", stateLabel].filter(Boolean).join(" / ");
+    meta.textContent = [categoryLabel(programCategory(program)), stateLabel].filter(Boolean).join(" / ");
 
     card.appendChild(time);
     card.appendChild(title);
@@ -5328,7 +5394,7 @@
     Object.keys(genres).sort().forEach(function (genre) {
       var option = document.createElement("option");
       option.value = genre;
-      option.textContent = genre;
+      option.textContent = categoryLabel(genre);
       select.appendChild(option);
     });
     select.value = current;
@@ -6494,7 +6560,7 @@
       categoryOptionEntries(categoryValues).forEach(function (category) {
         var option = document.createElement("option");
         option.value = category;
-        option.textContent = category;
+        option.textContent = categoryLabel(category);
         option.selected = categoryValues.indexOf(category) >= 0;
         categories.appendChild(option);
       });

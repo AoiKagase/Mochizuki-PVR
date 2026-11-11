@@ -1615,9 +1615,15 @@ summary:focus-visible,
   contain: layout paint style;
   content-visibility: auto;
   contain-intrinsic-size: 0 720px;
-  background:
-    linear-gradient(to bottom, var(--schedule-grid-major) 1px, transparent 1px) 0 0 / 100% 69px,
-    var(--schedule-grid);
+  background: var(--schedule-grid);
+}
+
+.schedule-hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--schedule-grid-major);
+  pointer-events: none;
 }
 
 .schedule-card {
@@ -1812,14 +1818,6 @@ summary:focus-visible,
 
 .schedule-card.title-only {
   padding: 2px 4px;
-}
-
-.schedule-card.micro {
-  padding: 0;
-}
-
-.schedule-card.micro > * {
-  display: none;
 }
 
 .channel-actions {
@@ -3550,9 +3548,10 @@ body.view-settings .settings-grid {
   body.view-schedule .schedule-list-alternative {
     position: fixed;
     right: max(12px, env(safe-area-inset-right));
-    bottom: max(72px, calc(env(safe-area-inset-bottom) + 72px));
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 16px));
     z-index: 12;
-    width: min(360px, calc(100vw - 24px));
+    width: max-content;
+    max-width: min(144px, calc(100vw - 184px));
     max-height: calc(100dvh - 128px);
     margin: 0;
     overflow: hidden;
@@ -3563,9 +3562,11 @@ body.view-settings .settings-grid {
   }
 
   body.view-schedule .schedule-list-alternative[open] {
-    top: max(64px, calc(env(safe-area-inset-top) + 64px));
+    top: calc(var(--schedule-header-height, 97px) + 8px);
     display: flex;
     flex-direction: column;
+    width: min(360px, calc(100vw - 24px));
+    max-width: none;
     max-height: none;
   }
 
@@ -3575,9 +3576,15 @@ body.view-settings .settings-grid {
   }
 
   body.view-schedule .schedule-list-alternative summary {
+    display: block;
     flex: 0 0 auto;
     padding: 0 12px;
     background: var(--surface-control-soft);
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 44px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   body.view-schedule .schedule-list-alternative[open] summary {
@@ -3935,6 +3942,14 @@ body.view-schedule .schedule-zoom-controls {
 }
 body.view-schedule .schedule-toolbar > * {
   order: 0;
+}
+@media (max-width: 760px) {
+  body.view-schedule .schedule-guide-scroll {
+    height: calc(100vh - var(--schedule-header-height, 97px) - 80px - env(safe-area-inset-bottom));
+    max-height: calc(100vh - var(--schedule-header-height, 97px) - 80px - env(safe-area-inset-bottom));
+    height: calc(100dvh - var(--schedule-header-height, 97px) - 80px - env(safe-area-inset-bottom));
+    max-height: calc(100dvh - var(--schedule-header-height, 97px) - 80px - env(safe-area-inset-bottom));
+  }
 }
 
 @media (max-width: 1023px) {

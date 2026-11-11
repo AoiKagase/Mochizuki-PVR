@@ -225,7 +225,8 @@ test("schedule header fits every breakpoint and restores ordinary navigation", a
       assert.equal(geometry.toolbar.height, 48);
       assert.ok(geometry.filterRight <= geometry.refreshLeft, JSON.stringify(geometry));
       assert.ok(geometry.toolbar.top >= geometry.primary.bottom);
-      assert.ok(geometry.guideBottom <= 901 && geometry.guideBottom >= 898, JSON.stringify(geometry));
+      const expectedGuideBottom = width <= 760 ? 820 : 900; // mobile controls have their own bottom row
+      assert.ok(Math.abs(geometry.guideBottom - expectedGuideBottom) <= 1, JSON.stringify(geometry));
       assert.equal(geometry.channelHeight, 52);
       assert.ok(geometry.columnWidth >= 192);
       assert.ok(geometry.dayVisible && geometry.conflictHidden && geometry.logoutInMenu);
@@ -419,45 +420,45 @@ test("guide prioritizes readable titles at every zoom without changing program t
   for (const colorScheme of ["light", "dark"]) await t.test(colorScheme, async () => {
     const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 }, colorScheme });
     try {
-      let start = now - 60000;
-      const programs = [5, 15, 30, 60].map(minutes => {
+      let start = now + 60000;
+      const programs = [1, 3, 5, 10, 15, 30, 60].map(minutes => {
         const item = { ...program, id: "guide-" + minutes, title: minutes + "分番組の見切れを確認", start, end: start + minutes * 60000, seconds: minutes * 60 };
         start = item.end;
         return item;
       });
       await page.route("**/api/schedule", route => route.fulfill({ json: [{ channel, programs }] }));
-      await page.route("**/api/recording", route => route.fulfill({ json: [programs[2]] }));
-      await page.route("**/api/reserves", route => route.fulfill({ json: [programs[1]] }));
+      await page.route("**/api/recording", route => route.fulfill({ json: [programs[5]] }));
+      await page.route("**/api/reserves", route => route.fulfill({ json: [programs[4]] }));
       await page.addInitScript(() => localStorage.setItem("mochizuki.scheduleZoomLevel", "wide"));
       await loaded(page, "schedule");
       for (const zoom of ["wide", "standard", "detail", "precise"]) {
         await page.locator('.schedule-guide-grid[data-schedule-zoom="' + zoom + '"]').waitFor();
         // Lanes are virtualized and populated after the guide shell renders.
-        await page.waitForFunction(() => document.querySelectorAll(".schedule-card").length === 4);
+        await page.waitForFunction(() => document.querySelectorAll(".schedule-card").length === 7);
         const geometry = await page.locator(".schedule-card").evaluateAll(cards => cards.map(card => {
           const box = card.getBoundingClientRect();
           const parts = [...card.querySelectorAll(".schedule-card-time, .schedule-card-state, strong, .schedule-card-meta")]
             .filter(e => getComputedStyle(e).display !== "none")
             .map(e => { const b = e.getBoundingClientRect(); return { text: e.textContent, top: b.top - box.top, bottom: b.bottom - box.top, height: b.height, scroll: e.scrollHeight }; });
-          return { id: card.dataset.programId, height: box.height, start: card.dataset.start, label: card.getAttribute("aria-label"), parts };
+          return { id: card.dataset.programId, top: box.top, bottom: box.bottom, height: box.height, start: card.dataset.start, label: card.getAttribute("aria-label"), parts };
         }));
-        assert.equal(geometry.length, 4);
+        assert.equal(geometry.length, 7);
         for (const card of geometry) {
           const source = programs.find(p => p.id === card.id);
           assert.equal(Number(card.start), source.start);
           assert.ok(card.label.includes(source.title), card.label);
           if (card.id === "guide-30") assert.match(card.label, /録画中/);
           if (card.id === "guide-15") assert.match(card.label, /自動予約/);
-          // A sub-line-height program can be a colored time marker; its full
-          // accessible name and keyboard details must remain available.
+          // Even a one-minute program must have a readable, unclipped title.
           for (let i = 0; i < card.parts.length; i++) {
             const part = card.parts[i];
             assert.ok(part.top >= 0 && part.bottom <= card.height + 0.5, JSON.stringify({ zoom, card }));
             assert.ok(part.scroll <= part.height + 1, JSON.stringify({ zoom, part }));
             if (i) assert.ok(card.parts[i - 1].bottom <= part.top + 0.5, JSON.stringify({ zoom, card }));
           }
-          if (card.height >= 22) assert.ok(card.parts.some(p => p.text.includes(source.title)), JSON.stringify({ zoom, card }));
+          assert.ok(card.parts.some(p => p.text.includes(source.title)), JSON.stringify({ zoom, card }));
         }
+        for (let i = 1; i < geometry.length; i++) assert.ok(geometry[i - 1].bottom <= geometry[i].top + 0.5, JSON.stringify({ zoom, geometry }));
         if (zoom !== "precise") await page.locator("#scheduleZoomInButton").click();
       }
       const first = page.locator('.schedule-card[data-program-id="guide-5"]');
@@ -470,6 +471,92 @@ test("guide prioritizes readable titles at every zoom without changing program t
       assert.equal(await first.evaluate(e => document.activeElement === e), true);
     } finally { await context.close(); }
   });
+});
+
+test("mobile guide list launcher leaves program titles unobstructed", async t => {
+  for (const width of [320, 375, 553, 760]) await t.test(String(width), async () => {
+    const { page, context } = await pageFor({ viewport: { width, height: 871 }, hasTouch: true, colorScheme: "dark" });
+    try {
+      await loaded(page, "schedule");
+      const summary = page.locator(".schedule-list-alternative summary");
+      const layout = await page.evaluate(() => {
+        const rect = selector => { const r = document.querySelector(selector).getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height }; };
+        return { guide: rect(".schedule-guide-scroll"), list: rect(".schedule-list-alternative"), zoom: rect(".schedule-zoom-controls"), width: document.documentElement.scrollWidth };
+      });
+      assert.ok(layout.list.width <= 144 && layout.list.height >= 44, JSON.stringify(layout));
+      assert.ok(layout.guide.bottom <= layout.list.top && layout.guide.bottom <= layout.zoom.top, JSON.stringify(layout));
+      assert.ok(layout.zoom.right <= layout.list.left, JSON.stringify(layout));
+      assert.equal(layout.width, width);
+      await summary.click();
+      await page.locator('.schedule-list-search input').fill('監査用番組');
+      await page.locator('.schedule-touch-programs .program-row').waitFor();
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('.schedule-list-alternative').getAttribute('open'), null);
+      assert.equal(await summary.evaluate(e => document.activeElement === e), true);
+    } finally { await context.close(); }
+  });
+});
+
+test("short-program expansion keeps stations, hour ticks and current-time line aligned", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 1024, height: 720 } });
+  try {
+    const start = Math.floor(now / 3600000) * 3600000;
+    const other = { ...channel, id: 'second-station', name: '第2放送局' };
+    let cursor = start + 3600000;
+    const short = [1, 3, 5, 10, 15, 26, 60, 60].map((minutes, i) => {
+      const item = { ...program, id: 'short-' + i, title: minutes + '分番組', start: cursor, end: cursor + minutes * 60000 };
+      cursor = item.end;
+      return item;
+    });
+    const long = Array.from({ length: 12 }, (_, hour) => ({ ...program, id: 'long-' + hour, channel: other, start: start + hour * 3600000, end: start + (hour + 1) * 3600000 }));
+    await page.route('**/api/schedule', route => route.fulfill({ json: [{ channel, programs: short }, { channel: other, programs: long }] }));
+    await loaded(page, 'schedule');
+    await page.locator('.schedule-card[data-program-id="long-2"]').waitFor();
+    const geometry = await page.evaluate(start => {
+      const top = id => document.querySelector('[data-program-id="' + id + '"]').offsetTop;
+      const tick = document.querySelectorAll('.schedule-time-rail span')[2].offsetTop;
+      const lines = [...document.querySelectorAll('.schedule-now-line')].map(e => e.offsetTop);
+      const hours = [...document.querySelectorAll('.schedule-hour-line')].map(e => e.offsetTop);
+      return { short: top('short-6'), long: top('long-2'), tick, lines, hours };
+    }, start);
+    assert.equal(geometry.short, geometry.long);
+    assert.equal(geometry.long, geometry.tick);
+    assert.ok(geometry.hours.includes(geometry.tick));
+    assert.equal(geometry.lines.length, 2);
+    assert.ok(Math.abs(geometry.lines[0] - geometry.lines[1]) <= 1);
+    // Keep a real broadcast boundary at the top while changing zoom.
+    await page.locator('.schedule-guide-scroll').evaluate((e, top) => { e.scrollTop = top; }, geometry.tick);
+    await page.locator('#scheduleZoomInButton').click();
+    await page.waitForFunction(() => {
+      const scroll = document.querySelector('.schedule-guide-scroll');
+      const tick = document.querySelectorAll('.schedule-time-rail span')[2];
+      return Math.abs(scroll.scrollTop - tick.offsetTop) <= 1;
+    });
+    await page.locator('.schedule-guide-scroll').evaluate(e => { e.scrollTop = e.scrollHeight; });
+    await page.locator('.schedule-card[data-program-id="long-11"]').waitFor();
+    assert.equal(await page.locator('.schedule-card[data-program-id="long-11"] strong').isVisible(), true);
+  } finally { await context.close(); }
+});
+
+test("genre labels are Japanese while filter values remain compatible", async () => {
+  const { page, context } = await pageFor();
+  try {
+    const second = { ...program, id: "documentary", category: "documentary", start: program.end, end: program.end + 3600000 };
+    const unknown = { ...second, id: "unknown-genre", category: "独自ジャンル" };
+    await page.route("**/api/schedule", route => route.fulfill({ json: [{ channel, programs: [program, second, unknown] }] }));
+    await loaded(page, "schedule");
+    await page.locator('#scheduleFilterButton').click();
+    assert.equal(await page.locator('#scheduleGenre option[value="news"]').textContent(), 'ニュース・報道');
+    assert.equal(await page.locator('#scheduleGenre option[value="documentary"]').textContent(), 'ドキュメンタリー・教養');
+    assert.equal(await page.locator('#scheduleGenre option[value="独自ジャンル"]').textContent(), '独自ジャンル');
+    await page.locator('#scheduleGenre').selectOption('documentary');
+    await page.keyboard.press('Escape');
+    await page.locator('.schedule-card[data-program-id="documentary"]').waitFor();
+    assert.equal(await page.locator('.schedule-card').count(), 1);
+    assert.match(await page.locator('.schedule-card').getAttribute('aria-label'), /ドキュメンタリー・教養/);
+    await page.locator('.schedule-card').click();
+    assert.equal(await page.locator('#programDialog .program-category-chip').textContent(), 'ドキュメンタリー・教養');
+  } finally { await context.close(); }
 });
 
 test("login errors preserve input and allow retry without duplicate requests", async t => {
