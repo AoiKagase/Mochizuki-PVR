@@ -4174,7 +4174,7 @@
     }
     channelGroups.forEach(function (group) {
       group.programs.forEach(function (program) {
-        var start = program.start;
+        var start = Math.max(firstStart, program.start);
         var end = programEnd(program);
         if (end <= start) {
           return;
@@ -4630,7 +4630,7 @@
         if (!program || !program.start) {
           return false;
         }
-        if (program.end && program.end < now) {
+        if (program.end && program.end <= now) {
           return false;
         }
         if (state.scheduleDay && dateKey(program.start) !== state.scheduleDay) {
@@ -4665,6 +4665,20 @@
     });
     syncScheduleZoomControls();
     document.body.classList.remove("schedule-list-open");
+    var previousScroll = root.querySelector(".schedule-guide-scroll");
+    if (previousScroll && previousScroll.scheduleTimeline) {
+      if (previousScroll.dataset.scheduleDay !== state.scheduleDay) {
+        resetScheduleGuideScroll(false);
+      } else {
+        // Read the actual position before replacing the guide: a scroll event
+        // may still be queued when an automatic refresh finishes.
+        state.scheduleGuideScroll = {
+          left: previousScroll.scrollLeft,
+          top: previousScroll.scrollTop,
+          time: previousScroll.scrollTop > 0 ? previousScroll.scheduleTimeline.timeAt(previousScroll.scrollTop) : null
+        };
+      }
+    }
     root.innerHTML = "";
     if (!channelGroups.length) {
       renderScheduleEmpty(root, channels);
@@ -4825,6 +4839,17 @@
     return labels;
   }
 
+  function resetScheduleGuideScroll(resetHorizontal) {
+    var scroll = document.querySelector(".schedule-guide-scroll");
+    var left = resetHorizontal ? 0 : (scroll ? scroll.scrollLeft : state.scheduleGuideScroll.left || 0);
+    if (scroll) {
+      scroll.scrollLeft = left;
+      scroll.scrollTop = 0;
+    }
+    state.scheduleGuideScroll = { left: left, top: 0 };
+    state.scheduleGuideScrollToCurrentTime = false;
+  }
+
   function resetScheduleFilters() {
     state.scheduleChannel = "";
     state.scheduleChannelTouched = false;
@@ -4836,7 +4861,7 @@
     state.listFilters.schedule = defaultListFilter("schedule");
     saveListFilters();
     saveHiddenChannels();
-    state.scheduleGuideScroll = { left: 0, top: 0 };
+    resetScheduleGuideScroll(true);
     renderSchedule();
   }
 
@@ -4911,9 +4936,9 @@
       });
     });
     var timelineNow = Date.now();
-    if ((!state.scheduleDay || dateKey(timelineNow) === state.scheduleDay) && timelineNow < firstStart) {
-      firstStart = timelineNow;
-    }
+    // Rolling views start at the current hour, even if a long program began
+    // earlier. Explicit dates keep the first available program's start.
+    if (!state.scheduleDay) firstStart = timelineNow;
     firstStart = Math.floor(firstStart / 3600000) * 3600000;
     lastEnd = Math.ceil(lastEnd / 3600000) * 3600000;
     var timeline = createScheduleTimeline(channelGroups, firstStart, lastEnd, minuteHeight);
@@ -4932,6 +4957,7 @@
     scroll.setAttribute("aria-describedby", help.id);
     scroll.tabIndex = 0;
     scroll.scheduleTimeline = timeline;
+    scroll.dataset.scheduleDay = state.scheduleDay;
     var virtualLanes = [];
     var virtualRenderFrame = 0;
     var virtualWindowStart = -1;
@@ -5024,9 +5050,11 @@
     }
 
     scroll.addEventListener("scroll", function () {
+      if (!scroll.isConnected) return;
       state.scheduleGuideScroll = {
         left: scroll.scrollLeft,
-        top: scroll.scrollTop
+        top: scroll.scrollTop,
+        time: scroll.scrollTop > 0 ? timeline.timeAt(scroll.scrollTop) : null
       };
       queueVisibleScheduleLanes();
     });
@@ -5088,7 +5116,11 @@
     scroll.appendChild(grid);
     root.appendChild(scroll);
     window.setTimeout(function () {
+      if (!scroll.isConnected) return;
       var scrollTop = state.scheduleGuideScroll.top || 0;
+      if (state.scheduleGuideScroll.time != null) {
+        scrollTop = timeline.position(state.scheduleGuideScroll.time);
+      }
       if (state.scheduleGuideScrollToCurrentTime) {
         var currentTimeScrollTop = scheduleCurrentTimeScrollTop(scroll, firstStart, lastEnd, timeline, Date.now());
         if (currentTimeScrollTop !== null) {
@@ -7985,6 +8017,7 @@
     if (scheduleDay) {
       scheduleDay.addEventListener("change", function () {
         state.scheduleDay = scheduleDay.value;
+        resetScheduleGuideScroll(false);
         renderSchedule();
       });
     }

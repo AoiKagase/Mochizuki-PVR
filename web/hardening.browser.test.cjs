@@ -791,6 +791,60 @@ test("mobile guide list launcher leaves program titles unobstructed", async t =>
   });
 });
 
+test("guide advances past finished hours and resets its start when changing dates", async t => {
+  for (const width of [1440, 375]) await t.test(String(width), async () => {
+    const { page, context } = await pageFor({ viewport: { width, height: 900 }, timezoneId: "Asia/Tokyo", isMobile: width < 1000, hasTouch: width < 1000, colorScheme: width < 1000 ? "light" : "dark" });
+    try {
+      const at = time => Date.parse("2026-11-13T" + time + ":00+09:00");
+      await page.clock.install({ time: at("10:30") });
+      const other = { ...channel, id: "trim-other", name: "第2放送局" };
+      const make = (id, start, end, station = channel) => ({ ...program, id, title: id, channel: station, start, end });
+      const programs = [
+        make("long-on-air", at("07:00"), at("12:00")),
+        ...Array.from({ length: 12 }, (_, i) => make("future-" + i, at("12:00") + i * 3600000, at("13:00") + i * 3600000)),
+        make("tomorrow", at("00:00") + 86400000 + 1800000, at("01:00") + 86400000)
+      ];
+      await page.route("**/api/schedule", route => route.fulfill({ json: [
+        { channel, programs },
+        { channel: other, programs: [make("ended-at-now", at("09:00"), at("10:30"), other), make("other-on-air", at("10:30"), at("12:00"), other)] }
+      ] }));
+      await loaded(page, "schedule");
+      const guideTime = () => page.locator(".schedule-guide-scroll").evaluate(e => ({ start: e.scheduleTimeline.timeAt(0), viewed: e.scheduleTimeline.timeAt(e.scrollTop), top: e.scrollTop }));
+      assert.equal((await guideTime()).start, at("10:00"));
+      assert.equal(await page.locator('[data-program-id="ended-at-now"]').count(), 0);
+      const long = page.locator('[data-program-id="long-on-air"]');
+      assert.equal(await long.getAttribute("data-start"), String(at("07:00")));
+      assert.equal(await long.evaluate(e => e.offsetTop), 0);
+      await capture(page, "guide-trim-current-" + width);
+      await page.locator(".schedule-guide-scroll").evaluate((e, time) => { e.scrollTop = e.scheduleTimeline.position(time); }, at("13:00"));
+      await page.waitForFunction(time => {
+        const e = document.querySelector(".schedule-guide-scroll");
+        return Math.abs(e.scheduleTimeline.timeAt(e.scrollTop) - time) < 60000;
+      }, at("13:00"));
+      await page.clock.setSystemTime(at("11:30"));
+      await page.clock.runFor(30000);
+      await page.waitForFunction(time => document.querySelector(".schedule-guide-scroll").scheduleTimeline.timeAt(0) === time, at("11:00"));
+      assert.ok(Math.abs((await guideTime()).viewed - at("13:00")) < 60000, JSON.stringify(await guideTime()));
+      await page.locator("#scheduleDay").selectOption("2026-11-14");
+      await page.waitForFunction(() => document.querySelector(".schedule-guide-scroll").scrollTop === 0);
+      assert.equal((await guideTime()).start, at("00:00") + 86400000);
+      await page.locator('[data-program-id="tomorrow"]').waitFor({ state: "visible" });
+      await capture(page, "guide-trim-date-" + width);
+      await page.locator("#scheduleDay").selectOption("2026-11-13");
+      assert.equal((await guideTime()).start, at("07:00"));
+      assert.equal((await guideTime()).top, 0);
+      await page.locator("#scheduleDay").selectOption("");
+      await page.waitForFunction(() => document.querySelector(".schedule-guide-scroll").scrollTop === 0);
+      assert.equal((await guideTime()).start, at("11:00"));
+      await page.clock.setSystemTime(at("12:30"));
+      await page.clock.runFor(30000);
+      await page.waitForFunction(time => document.querySelector(".schedule-guide-scroll").scheduleTimeline.timeAt(0) === time, at("12:00"));
+      assert.equal((await guideTime()).top, 0);
+      assert.equal(await page.locator('[data-program-id="long-on-air"]').count(), 0);
+    } finally { await context.close(); }
+  });
+});
+
 test("short-program expansion keeps stations, hour ticks and current-time line aligned", async () => {
   const { page, context } = await pageFor({ viewport: { width: 1024, height: 720 }, timezoneId: "Asia/Tokyo" });
   try {
