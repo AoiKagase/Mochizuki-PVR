@@ -121,8 +121,7 @@
   --topbar-height: 76px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+:root[data-theme="dark"] {
     color-scheme: dark;
     --bg: #141415;
     --ink: #ededed;
@@ -216,7 +215,6 @@
     --recording-state-ink: #141415;
     --conflict-state-ink: #141415;
   }
-}
 
 * {
   box-sizing: border-box;
@@ -295,6 +293,22 @@ strong {
   justify-content: center;
   gap: 0;
   min-width: 44px;
+}
+
+.theme-toggle-button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  order: 3;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.theme-toggle-button:hover {
+  background: var(--panel-strong);
+  color: var(--ink);
 }
 
 .icon-field-label {
@@ -3287,6 +3301,10 @@ body.view-settings .settings-grid {
 }
 
 @media (max-width: 520px) {
+  .theme-toggle-button {
+    order: 4;
+  }
+
   button,
   select,
   input:not([type="checkbox"]),
@@ -4109,15 +4127,14 @@ body.view-schedule .schedule-toolbar > * {
 }
 @media (prefers-reduced-motion: reduce) { body.view-schedule .main-nav-drawer { transition: none; } }
 
-@media (prefers-color-scheme: dark) {
-  .schedule-card {
+:root[data-theme="dark"] .schedule-card {
   background: var(--panel-schedule);
 }
-  .schedule-card[class*="category-"] {
+  :root[data-theme="dark"] .schedule-card[class*="category-"] {
   background: var(--panel-schedule);
   border-color: var(--schedule-grid-line);
 }
-  .schedule-card::before {
+  :root[data-theme="dark"] .schedule-card::before {
   content: "";
   position: absolute;
   top: 0;
@@ -4127,53 +4144,52 @@ body.view-schedule .schedule-toolbar > * {
   background: var(--program-genre-color, transparent);
   pointer-events: none;
 }
-  .schedule-card.category-anime {
+  :root[data-theme="dark"] .schedule-card.category-anime {
   --program-genre-color: var(--category-anime-line);
 }
-  .schedule-card.category-movie {
+  :root[data-theme="dark"] .schedule-card.category-movie {
   --program-genre-color: var(--category-movie-line);
 }
-  .schedule-card.category-news {
+  :root[data-theme="dark"] .schedule-card.category-news {
   --program-genre-color: var(--category-news-line);
 }
-  .schedule-card.category-sports {
+  :root[data-theme="dark"] .schedule-card.category-sports {
   --program-genre-color: var(--category-sports-line);
 }
-  .schedule-card.category-drama {
+  :root[data-theme="dark"] .schedule-card.category-drama {
   --program-genre-color: var(--category-drama-line);
 }
-  .schedule-card.category-music {
+  :root[data-theme="dark"] .schedule-card.category-music {
   --program-genre-color: var(--category-music-line);
 }
-  .schedule-card.category-information {
+  :root[data-theme="dark"] .schedule-card.category-information {
   --program-genre-color: var(--category-information-line);
 }
-  .schedule-card.category-variety {
+  :root[data-theme="dark"] .schedule-card.category-variety {
   --program-genre-color: var(--category-variety-line);
 }
-  .schedule-card.category-documentary, .schedule-card.category-theater, .schedule-card.category-hobby, .schedule-card.category-welfare, .schedule-card.category-etc {
+  :root[data-theme="dark"] .schedule-card.category-documentary, :root[data-theme="dark"] .schedule-card.category-theater, :root[data-theme="dark"] .schedule-card.category-hobby, :root[data-theme="dark"] .schedule-card.category-welfare, :root[data-theme="dark"] .schedule-card.category-etc {
   --program-genre-color: var(--category-neutral-line);
 }
-  .schedule-card.recording {
+  :root[data-theme="dark"] .schedule-card.recording {
   border-color: var(--error);
   background: var(--error-soft);
   box-shadow: none;
 }
-  .schedule-card.reserved {
+  :root[data-theme="dark"] .schedule-card.reserved {
   border-color: var(--reserved);
   background: var(--reserved-soft);
   box-shadow: none;
 }
-  .schedule-card.conflict {
+  :root[data-theme="dark"] .schedule-card.conflict {
   border-color: var(--warn);
   background: var(--warn-soft);
   box-shadow: none;
 }
-  .schedule-card.skip {
+  :root[data-theme="dark"] .schedule-card.skip {
   border-color: var(--skip-state-line);
   background: var(--skip-state-surface);
 }
-  .schedule-card:hover {
+  :root[data-theme="dark"] .schedule-card:hover {
   background: var(--schedule-card-hover);
-}
 }

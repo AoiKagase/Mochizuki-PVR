@@ -130,6 +130,72 @@ test("Mochizuki starts when browser storage is unavailable", async () => {
   } finally { await context.close(); }
 });
 
+test("theme toggle overrides the system palette and survives navigation and reload", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 }, colorScheme: "light" });
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  try {
+    await loaded(page, "schedule");
+    const toggle = page.getByRole("button", { name: "ダークモードに切り替え", exact: true });
+    await toggle.click();
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    assert.equal(await page.locator("html").evaluate(e => getComputedStyle(e).colorScheme), "dark");
+    assert.equal(await page.locator(".schedule-card").first().evaluate(e => getComputedStyle(e).backgroundColor), "rgb(25, 25, 27)");
+    assert.equal(await page.locator("#themeToggleButton use").getAttribute("href"), "#icon-sun");
+    await capture(page, "theme-desktop-dark");
+    await page.getByRole("link", { name: "ダッシュボード", exact: true }).click();
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.reload();
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.getByRole("button", { name: "ライトモードに切り替え", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.reload();
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
+    assert.equal(await page.locator("html").evaluate(e => getComputedStyle(e).colorScheme), "light");
+    assert.equal(await page.evaluate(() => localStorage.getItem("mochizuki.theme")), "light");
+    await loaded(page, "schedule");
+    assert.notEqual(await page.locator(".schedule-card").first().evaluate(e => getComputedStyle(e).backgroundColor), "rgb(25, 25, 27)");
+    await capture(page, "theme-desktop-light");
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
+test("theme follows system changes until chosen and works without browser storage", async () => {
+  const { page, context } = await pageFor({ colorScheme: "dark" });
+  try {
+    await page.addInitScript(() => Object.defineProperty(window, "localStorage", { get() { throw new DOMException("disabled", "SecurityError"); } }));
+    await loaded(page);
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
+    await page.getByRole("button", { name: "ダークモードに切り替え", exact: true }).click();
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.emulateMedia({ colorScheme: "light" });
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+  } finally { await context.close(); }
+});
+
+test("theme toggle stays beside settings with a touch target on narrow screens", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 320, height: 900 }, isMobile: true, hasTouch: true });
+  try {
+    for (const route of ["dashboard", "schedule"]) {
+      await loaded(page, route);
+      const toggle = page.locator("#themeToggleButton");
+      await toggle.waitFor({ state: "visible" });
+      const buttonBox = await toggle.boundingBox();
+      const settingsBox = await page.locator(".management-menu > summary").boundingBox();
+      assert.ok(buttonBox.width >= 44 && buttonBox.height >= 44, JSON.stringify(buttonBox));
+      assert.ok(Math.abs(buttonBox.y - settingsBox.y) <= 4 && buttonBox.x >= settingsBox.x + settingsBox.width, JSON.stringify({ buttonBox, settingsBox }));
+      assert.ok(buttonBox.x + buttonBox.width <= 320);
+      await toggle.click();
+      await capture(page, "theme-mobile-" + route);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    }
+  } finally { await context.close(); }
+});
+
 test("favicon links and image load on dashboard and login", async () => {
   const { page, context } = await pageFor();
   try {
