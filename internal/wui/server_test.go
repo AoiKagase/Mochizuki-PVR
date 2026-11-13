@@ -381,7 +381,7 @@ func TestStaticImageCacheHeadersMatchLegacyWUI(t *testing.T) {
 	if res.Code != http.StatusOK {
 		t.Fatalf("index status = %d body=%s", res.Code, res.Body.String())
 	}
-	if got := res.Header().Get("Cache-Control"); got != "no-cache" {
+	if got := res.Header().Get("Cache-Control"); got != "no-store" {
 		t.Fatalf("index Cache-Control = %q", got)
 	}
 	if got := res.Header().Get("Server"); got != "Mochizuki PVR" {

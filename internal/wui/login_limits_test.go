@@ -197,7 +197,25 @@ func TestLoginSecurityBrowser(t *testing.T) {
 	handler := newTestHandler(t, testPaths(t.TempDir()), &config.Config{
 		WUIAccounts: []config.WebUser{{Username: "security-audit", PasswordHash: hash}},
 	})
-	fixture := httptest.NewServer(handler)
+	fixture := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" && r.URL.Path != "/api/status" {
+			handler.ServeHTTP(w, r)
+			return
+		}
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, r)
+		// Reproduce the browser TTL observed behind the public reverse proxy.
+		// It replaces no-cache, while respecting an explicit no-store response.
+		// The test header also primes cache entries from the previous release.
+		if response.Header().Get("Cache-Control") == "no-cache" || r.Header.Get("X-Test-Legacy-Cache") == "true" {
+			response.Header().Set("Cache-Control", "max-age=14400")
+		}
+		for name, values := range response.Header() {
+			w.Header()[name] = values
+		}
+		w.WriteHeader(response.Code)
+		_, _ = w.Write(response.Body.Bytes())
+	}))
 	defer fixture.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()

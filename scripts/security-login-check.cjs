@@ -16,7 +16,15 @@ async function main() {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(origin + '/login');
+    await page.setExtraHTTPHeaders({ 'X-Test-Legacy-Cache': 'true' });
+    // Visit protected resources before signing in, as an expired session does.
+    // Their redirect/401 responses must never be reused after login succeeds.
+    await page.goto(origin + '/');
+    await page.waitForURL(origin + '/login');
+    await page.evaluate(() => localStorage.setItem('mochizuki.theme', 'dark'));
+    const unauthenticatedStatus = await page.evaluate(async () => (await fetch('/api/status')).status);
+    assert.equal(unauthenticatedStatus, 401);
+    await page.setExtraHTTPHeaders({});
     await page.locator('#username').fill('security-audit');
     await page.locator('#password').fill('audit-password');
     const login = page.waitForResponse(r => r.url() === origin + '/api/auth/login' && r.request().method() === 'POST');
@@ -28,6 +36,7 @@ async function main() {
     assert.ok(session && session.httpOnly && session.sameSite === 'Strict');
     const authorizedStatus = await page.evaluate(async () => (await fetch('/api/status')).status);
     assert.equal(authorizedStatus, 200);
+    assert.equal(await page.evaluate(() => localStorage.getItem('mochizuki.theme')), 'dark');
     await page.screenshot({ path: path.join(output, 'authenticated.png'), fullPage: true });
     const failures = await page.evaluate(async () => {
       const statuses = [];

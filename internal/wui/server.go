@@ -696,7 +696,10 @@ func listenAddress(host string, port int) string {
 func (s *server) withCommonHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Server", "Mochizuki PVR")
-		w.Header().Set("Cache-Control", "no-cache")
+		// Never store login redirects, authorization failures, or dynamic pages.
+		// A proxy browser-TTL override can turn no-cache into a cached login loop.
+		// Cacheable images and logos opt in with private cache headers below.
+		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 		w.Header().Set("Referrer-Policy", "no-referrer")
@@ -810,6 +813,9 @@ func (s *server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: sessionID, Path: "/", HttpOnly: true, Secure: s.requestUsesHTTPS(r), SameSite: http.SameSiteStrictMode})
+	// Remove redirects and 401 responses cached before the no-store fix.
+	// Keep cookies and saved browser preferences intact.
+	w.Header().Set("Clear-Site-Data", `"cache"`)
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusNoContent)
 }

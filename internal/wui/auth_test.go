@@ -1,12 +1,52 @@
 package wui
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
+	passwordauth "mochizuki/internal/auth"
 	"mochizuki/internal/config"
 )
+
+func TestAuthenticationResponsesAreNotStored(t *testing.T) {
+	hash, err := passwordauth.HashPassword("test-password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := newTestHandler(t, testPaths(t.TempDir()), &config.Config{
+		WUIAccounts: []config.WebUser{{Username: "test-user", PasswordHash: hash}},
+	})
+	for _, target := range []string{"/", "/theme.js", "/api/status"} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, target, nil))
+		if got := response.Header().Get("Cache-Control"); got != "no-store" {
+			t.Errorf("unauthenticated %s Cache-Control=%q", target, got)
+		}
+	}
+	login := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{"username":"test-user","password":"test-password"}`))
+	login.Header.Set("Origin", "http://example.com")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, login)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("login status=%d", response.Code)
+	}
+	if got := response.Header().Get("Clear-Site-Data"); got != `"cache"` {
+		t.Fatalf("login cache recovery header=%q", got)
+	}
+	cookie := response.Result().Cookies()[0]
+	for _, target := range []string{"/", "/api/status"} {
+		request := httptest.NewRequest(http.MethodGet, target, nil)
+		request.AddCookie(cookie)
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || response.Header().Get("Cache-Control") != "no-store" {
+			t.Errorf("authenticated %s status=%d Cache-Control=%q", target, response.Code, response.Header().Get("Cache-Control"))
+		}
+	}
+}
 
 func TestRequestOriginTrustsForwardedHeadersOnlyWhenEnabled(t *testing.T) {
 	request := httptest.NewRequest("GET", "http://local.example/", nil)
