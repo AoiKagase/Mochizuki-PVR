@@ -20,6 +20,18 @@ type ScheduleChannelDocument struct {
 	Programs   []ScheduleProgramDocument
 }
 
+func ReadScheduleChannel(ctx context.Context, db *sql.DB, key string) (ScheduleChannelDocument, bool, error) {
+	var document string
+	err := db.QueryRowContext(ctx, "SELECT document_json FROM schedule_channels WHERE channel_key = ?", key).Scan(&document)
+	if err == sql.ErrNoRows {
+		return ScheduleChannelDocument{}, false, nil
+	}
+	if err != nil {
+		return ScheduleChannelDocument{}, false, fmt.Errorf("read schedule channel: %w", err)
+	}
+	return ScheduleChannelDocument{ChannelKey: key, Document: json.RawMessage(document)}, true, nil
+}
+
 func ReadSchedule(ctx context.Context, db *sql.DB) ([]ScheduleChannelDocument, error) {
 	rows, err := db.QueryContext(ctx, "SELECT channel_key, document_json FROM schedule_channels ORDER BY position")
 	if err != nil {

@@ -70,7 +70,7 @@
   var channelLogoLoadQueue = [];
   var channelLogoLoadsInFlight = 0;
   var channelLogoLoadScheduled = false;
-  var channelLogoLoadConcurrency = 1;
+  var channelLogoLoadConcurrency = 4;
   var channelLogoVisibilityObserver = null;
   var mochizukiConfigFormDirty = false;
   var mp4VideoEncodersLoaded = false;
@@ -2338,24 +2338,30 @@
         }
         channelLogoVisibilityObserver.unobserve(logo);
       }
-      channelLogoLoadsInFlight++;
-      var settle = function (available) {
-        logo.classList.remove("is-loading");
-        logo.removeAttribute("aria-busy");
-        if (!available) {
-          logo.classList.add("is-unavailable");
-        }
-        channelLogoLoadsInFlight--;
-        scheduleChannelLogoLoad();
-      };
-      logo.addEventListener("load", function () {
-        settle(true);
-      }, { once: true });
-      logo.addEventListener("error", function () {
-        settle(false);
-      }, { once: true });
-      logo.src = entry.url;
+      startChannelLogoLoad(entry);
     }
+  }
+
+  function startChannelLogoLoad(entry) {
+    var logo = entry.logo;
+    var settled = false;
+    channelLogoLoadsInFlight++;
+    function settle(available) {
+      if (settled) return;
+      settled = true;
+      logo.removeEventListener("load", loaded);
+      logo.removeEventListener("error", failed);
+      logo.classList.remove("is-loading");
+      logo.removeAttribute("aria-busy");
+      if (!available) logo.classList.add("is-unavailable");
+      channelLogoLoadsInFlight--;
+      scheduleChannelLogoLoad();
+    }
+    function loaded() { settle(true); }
+    function failed() { settle(false); }
+    logo.addEventListener("load", loaded, { once: true });
+    logo.addEventListener("error", failed, { once: true });
+    logo.src = entry.url;
   }
 
   function channelLogoElement(className, channelID) {

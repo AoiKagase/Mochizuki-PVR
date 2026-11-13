@@ -3929,7 +3929,12 @@ func (s *server) handleChannelLogo(w http.ResponseWriter, r *http.Request, id, a
 		legacyHTTPError(w, r, http.StatusUnsupportedMediaType)
 		return
 	}
-	channel, ok := s.findChannel(id)
+	// Logo requests only need channel metadata, not the full program guide.
+	channel, ok, err := schedulestore.ReadChannel(database.WithHandle(r.Context(), s.db), s.paths.Database, id)
+	if err != nil {
+		legacyHTTPError(w, r, http.StatusInternalServerError)
+		return
+	}
 	if !ok {
 		legacyHTTPError(w, r, http.StatusNotFound)
 		return

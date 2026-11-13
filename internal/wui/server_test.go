@@ -719,7 +719,7 @@ func TestNativeDashboardOnAirRowsReserveChannelLogoSpace(t *testing.T) {
 	for _, want := range []string{
 		`logoSlot.className = "live-channel-logo-slot"`,
 		`if (group.logo || (current && scheduleChannelHasLogo(current.channel))) {`,
-		`var channelLogoLoadConcurrency = 1;`,
+		`var channelLogoLoadConcurrency = 4;`,
 		`function channelLogoElement(className, channelID)`,
 		`logo.dataset.channelId = channelID;`,
 		`logo.dataset.logoCacheVersion = String(state.logoCacheVersion);`,
@@ -4169,6 +4169,50 @@ func TestAPIChannelLogoAndWatchProxyMirakurun(t *testing.T) {
 		if requests[i] != want[i] {
 			t.Fatalf("request[%d] = %q, want %q", i, requests[i], want[i])
 		}
+	}
+}
+
+func TestCachedChannelLogoDoesNotReadProgramDocuments(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	databasePath := filepath.Join(dir, "strata.db")
+	db, err := database.Open(ctx, databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := database.ReplaceSchedule(ctx, db, []database.ScheduleChannelDocument{{
+		ChannelKey: "3f", Document: json.RawMessage(`{"id":"3f","name":"cached station"}`),
+		Programs: []database.ScheduleProgramDocument{{ProgramID: "irrelevant", Document: json.RawMessage(`[]`)}},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	cacheDir := filepath.Join(dir, ".cache", "logos")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"3f", "unknown"} {
+		if err := os.WriteFile(filepath.Join(cacheDir, id+".png"), []byte("cached-png"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	handler := NewHandler(Paths{Database: databasePath}, &config.Config{MirakurunPath: "http://127.0.0.1:1"})
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/api/channel/3f/logo", nil))
+	if res.Code != http.StatusOK || res.Body.String() != "cached-png" {
+		t.Fatalf("cached logo unexpectedly depends on program documents: status=%d body=%q", res.Code, res.Body.String())
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/channel/3f/logo", nil)
+	req.Header.Set("If-None-Match", res.Header().Get("ETag"))
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusNotModified {
+		t.Fatalf("conditional cached logo status=%d", res.Code)
+	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/api/channel/unknown/logo", nil))
+	if res.Code != http.StatusNotFound {
+		t.Fatalf("unknown channel bypassed validation: status=%d", res.Code)
 	}
 }
 

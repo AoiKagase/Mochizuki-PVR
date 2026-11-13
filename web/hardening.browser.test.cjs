@@ -369,6 +369,44 @@ test("guide logos load directly and after navigation without hidden or offscreen
   });
 });
 
+test("a slow logo does not block other logos and parallel loads settle independently", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 } });
+  let releaseFirst;
+  const firstGate = new Promise(resolve => { releaseFirst = resolve; });
+  let active = 0, peak = 0;
+  try {
+    const channels = Array.from({ length: 8 }, (_, i) => ({ ...channel, id: "parallel-" + i, name: "並列確認" + i, hasLogoData: true }));
+    await page.route("**/api/schedule", route => route.fulfill({ json: channels.map(c => ({ channel: c, programs: [{ ...program, id: c.id, channel: c }] })) }));
+    const png = fs.readFileSync(path.join(__dirname, "favicon.png"));
+    await page.route("**/api/channel/*/logo", async route => {
+      active++;
+      peak = Math.max(peak, active);
+      try {
+        if (route.request().url().endsWith("/parallel-0/logo")) await firstGate;
+        else await new Promise(resolve => setTimeout(resolve, 100));
+        if (route.request().url().endsWith("/parallel-2/logo")) await route.abort("failed");
+        else await route.fulfill({ contentType: "image/png", body: png });
+      } finally { active--; }
+    });
+    await loaded(page, "schedule");
+    await page.waitForFunction(() => {
+      const image = document.querySelector('.schedule-channel-logo[data-channel-id="parallel-1"]');
+      return image && image.complete && image.naturalWidth > 0 && !image.classList.contains("is-loading");
+    }, null, { timeout: 1500 });
+    assert.ok(peak > 1 && peak <= 4, "observed parallel loads: " + peak);
+    releaseFirst();
+    await page.waitForFunction(() => [...document.querySelectorAll(".schedule-channel-logo")].every(image => !image.classList.contains("is-loading")));
+    const states = await page.locator(".schedule-channel-logo").evaluateAll(images => images.map(image => ({ id: image.dataset.channelId, loaded: image.complete && image.naturalWidth > 0, unavailable: image.classList.contains("is-unavailable") })));
+    for (const image of states) {
+      assert.equal(image.unavailable, image.id === "parallel-2", JSON.stringify(image));
+      assert.equal(image.loaded, image.id !== "parallel-2", JSON.stringify(image));
+    }
+  } finally {
+    releaseFirst();
+    await context.close();
+  }
+});
+
 test("graphite guide preserves genre strips, status names and readable text", async () => {
   const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 }, colorScheme: "dark" });
   try {

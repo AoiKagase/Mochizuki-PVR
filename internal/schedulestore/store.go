@@ -9,6 +9,23 @@ import (
 	legacy "mochizuki/internal/domain"
 )
 
+func ReadChannel(ctx context.Context, databasePath, id string) (legacy.Channel, bool, error) {
+	db, release, err := database.Acquire(ctx, databasePath)
+	if err != nil {
+		return legacy.Channel{}, false, err
+	}
+	defer release()
+	document, found, err := database.ReadScheduleChannel(ctx, db, id)
+	if err != nil || !found {
+		return legacy.Channel{}, false, err
+	}
+	var channel legacy.Channel
+	if err := json.Unmarshal(document.Document, &channel); err != nil {
+		return legacy.Channel{}, false, err
+	}
+	return channel, true, nil
+}
+
 func Read(ctx context.Context, databasePath string) ([]legacy.ChannelSchedule, error) {
 	db, release, err := database.Acquire(ctx, databasePath)
 	if err != nil {
