@@ -312,6 +312,55 @@ test("schedule header fits every breakpoint and restores ordinary navigation", a
   });
 });
 
+test("guide date defaults to today, removes all dates and resets to today", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 }, timezoneId: "Asia/Tokyo" });
+  try {
+    const fixedNow = Date.parse("2026-11-13T00:05:00+09:00");
+    await page.clock.install({ time: fixedNow });
+    const today = { ...program, id: "today", title: "今日の番組", start: fixedNow, end: fixedNow + 1800000 };
+    const tomorrow = { ...program, id: "tomorrow", title: "明日の番組", start: fixedNow + 86400000, end: fixedNow + 88200000 };
+    let programs = [today, tomorrow];
+    await page.route("**/api/schedule", route => route.fulfill({ json: [{ channel, programs }] }));
+    await loaded(page, "schedule");
+    const day = page.locator("#scheduleDay");
+    assert.equal(await day.inputValue(), "2026-11-13");
+    assert.deepEqual(await day.locator("option").evaluateAll(options => options.map(option => option.value)), ["2026-11-13", "2026-11-14"]);
+    assert.equal(await page.locator(".schedule-card").count(), 1);
+    assert.match(await page.locator(".schedule-card").textContent(), /今日の番組/);
+    await day.selectOption("2026-11-14");
+    assert.match(await page.locator(".schedule-card").textContent(), /明日の番組/);
+    await page.locator("#scheduleRefreshButton").click();
+    assert.equal(await day.inputValue(), "2026-11-14");
+    await page.locator("#scheduleFilterButton").click();
+    await page.locator("#scheduleResetFilters").click();
+    assert.equal(await day.inputValue(), "2026-11-13");
+    await capture(page, "guide-today-desktop");
+    await day.selectOption("2026-11-14");
+    programs = [today];
+    await page.locator("#scheduleRefreshButton").click();
+    await page.waitForFunction(() => document.querySelector("#scheduleDay").value === "2026-11-13");
+  } finally { await context.close(); }
+});
+
+test("guide keeps today selected when only future programs or no programs exist", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 375, height: 900 }, timezoneId: "Asia/Tokyo", isMobile: true, hasTouch: true });
+  try {
+    const fixedNow = Date.parse("2026-11-13T00:05:00+09:00");
+    await page.clock.install({ time: fixedNow });
+    let programs = [{ ...program, id: "tomorrow", start: fixedNow + 86400000, end: fixedNow + 88200000 }];
+    await page.route("**/api/schedule", route => route.fulfill({ json: [{ channel, programs }] }));
+    await loaded(page, "schedule");
+    assert.equal(await page.locator("#scheduleDay").inputValue(), "2026-11-13");
+    assert.equal(await page.locator(".schedule-card").count(), 0);
+    assert.match(await page.locator("#scheduleList").textContent(), /条件に一致する番組はありません/);
+    await capture(page, "guide-today-mobile-empty");
+    programs = [];
+    await page.locator("#scheduleRefreshButton").click();
+    await page.waitForFunction(() => document.querySelector("#scheduleDay").options.length === 1);
+    assert.equal(await page.locator("#scheduleDay").inputValue(), "2026-11-13");
+  } finally { await context.close(); }
+});
+
 test("schedule panels are exclusive, keyboard accessible and retain filter state across resize", async () => {
   const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 } });
   try {
@@ -726,9 +775,12 @@ test("mobile guide list launcher leaves program titles unobstructed", async t =>
 });
 
 test("short-program expansion keeps stations, hour ticks and current-time line aligned", async () => {
-  const { page, context } = await pageFor({ viewport: { width: 1024, height: 720 } });
+  const { page, context } = await pageFor({ viewport: { width: 1024, height: 720 }, timezoneId: "Asia/Tokyo" });
   try {
-    const start = Math.floor(now / 3600000) * 3600000;
+    // Keep this twelve-hour layout fixture within the selected calendar day.
+    const fixedNow = Date.parse("2026-11-13T08:30:00+09:00");
+    await page.clock.install({ time: fixedNow });
+    const start = Math.floor(fixedNow / 3600000) * 3600000;
     const other = { ...channel, id: 'second-station', name: '第2放送局' };
     let cursor = start + 3600000;
     const short = [1, 3, 5, 10, 15, 26, 60, 60].map((minutes, i) => {

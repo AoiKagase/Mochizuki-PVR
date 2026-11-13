@@ -92,7 +92,7 @@
     metrics: null,
     scheduleChannel: "",
     scheduleType: "",
-    scheduleDay: "",
+    scheduleDay: dateKey(Date.now()),
     scheduleGenre: "",
     scheduleHiddenChannels: loadHiddenChannels(),
     scheduleWindowMode: "day",
@@ -4829,7 +4829,7 @@
     state.scheduleChannel = "";
     state.scheduleChannelTouched = false;
     state.scheduleType = "";
-    state.scheduleDay = "";
+    state.scheduleDay = dateKey(Date.now());
     state.scheduleGenre = "";
     state.scheduleWindowMode = "all";
     state.scheduleHiddenChannels = [];
@@ -5434,16 +5434,15 @@
     if (!select) {
       return;
     }
-    var current = state.scheduleDay;
+    var now = Date.now();
+    var today = dateKey(now);
+    var current = state.scheduleDay || today;
     var days = {};
+    days[today] = true;
     select.innerHTML = "";
-    var all = document.createElement("option");
-    all.value = "";
-    all.textContent = "すべて";
-    select.appendChild(all);
     channelProgramGroups().forEach(function (group) {
       (group.programs || []).forEach(function (program) {
-        if (program && program.start && (!program.end || program.end >= Date.now())) {
+        if (program && program.start && (!program.end || program.end >= now)) {
           days[dateKey(program.start)] = true;
         }
       });
@@ -5457,9 +5456,10 @@
     });
     select.value = current;
     if (select.value !== current) {
-      state.scheduleDay = "";
-      select.value = "";
+      current = today;
+      select.value = today;
     }
+    state.scheduleDay = current;
   }
 
   function renderScheduleGenreOptions(channels) {
