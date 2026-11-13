@@ -1628,16 +1628,18 @@ summary:focus-visible,
 
 .schedule-card {
   position: absolute;
-  left: 2px;
-  right: 2px;
+  left: 0;
+  right: 0;
   display: grid;
   align-content: start;
   gap: 2px;
   min-height: 0;
   overflow: hidden;
   padding: 4px 8px;
-  border: 1px solid var(--schedule-card-line);
-  border-radius: 4px;
+  /* Channel lanes own vertical dividers; each program owns its bottom edge. */
+  border: solid var(--schedule-grid-line);
+  border-width: 0 0 1px;
+  border-radius: 0;
   background: var(--panel-schedule);
   color: var(--ink);
   cursor: pointer;
@@ -1657,46 +1659,38 @@ summary:focus-visible,
 
 .schedule-card:focus-visible {
   outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline-offset: -3px;
 }
 
 .schedule-card.category-anime {
-  border-color: var(--category-anime-line);
   background: var(--category-anime-surface);
 }
 
 .schedule-card.category-movie {
-  border-color: var(--category-movie-line);
   background: var(--category-movie-surface);
 }
 
 .schedule-card.category-news {
-  border-color: var(--category-news-line);
   background: var(--category-news-surface);
 }
 
 .schedule-card.category-sports {
-  border-color: var(--category-sports-line);
   background: var(--category-sports-surface);
 }
 
 .schedule-card.category-drama {
-  border-color: var(--category-drama-line);
   background: var(--category-drama-surface);
 }
 
 .schedule-card.category-music {
-  border-color: var(--category-music-line);
   background: var(--category-music-surface);
 }
 
 .schedule-card.category-information {
-  border-color: var(--category-information-line);
   background: var(--category-information-surface);
 }
 
 .schedule-card.category-variety {
-  border-color: var(--category-variety-line);
   background: var(--category-variety-surface);
 }
 
@@ -1705,8 +1699,14 @@ summary:focus-visible,
 .schedule-card.category-hobby,
 .schedule-card.category-welfare,
 .schedule-card.category-etc {
-  border-color: var(--category-neutral-line);
   background: var(--category-neutral-surface);
+}
+
+.schedule-card.recording,
+.schedule-card.reserved,
+.schedule-card.conflict,
+.schedule-card.skip {
+  border-width: 1px;
 }
 
 .schedule-card.recording {
@@ -4099,7 +4099,7 @@ body.view-schedule .schedule-toolbar > * {
 }
   .schedule-card[class*="category-"] {
   background: var(--panel-schedule);
-  border-color: var(--schedule-card-line);
+  border-color: var(--schedule-grid-line);
 }
   .schedule-card::before {
   content: "";
