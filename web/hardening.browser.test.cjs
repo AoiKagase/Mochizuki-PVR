@@ -570,6 +570,33 @@ test("guide wraps program titles and fills remaining space with safe description
   });
 });
 
+test("guide uses an unavailable label instead of IDs and keeps the ID in program details", async () => {
+  const { page, context } = await pageFor({ viewport: { width: 1440, height: 900 } });
+  try {
+    const programs = [
+      { ...program, id: "missing-name-id", title: "", fullTitle: "" },
+      { ...program, id: "whitespace-name-id", title: "  ", fullTitle: "\t" },
+      { ...program, id: "flags-only-id", title: "", fullTitle: "[字]" },
+      { ...program, id: "pua-flags-only-id", title: "", fullTitle: "\uE0FE" },
+      { ...program, id: "unicode-flags-only-id", title: "", fullTitle: "🈑" },
+      { ...program, id: "normal-name-id", title: "", fullTitle: "🈑残す番組名🈓" }
+    ].map((p, i) => ({ ...p, start: now + i * 1800000, end: now + (i + 1) * 1800000 }));
+    await page.route("**/api/schedule", route => route.fulfill({ json: [{ channel, programs }] }));
+    await loaded(page, "schedule");
+    for (const p of programs.slice(0, -1)) {
+      const card = page.locator('.schedule-card[data-program-id="' + p.id + '"]');
+      await card.waitFor();
+      assert.equal(await card.locator(".program-title-label").textContent(), "番組情報未取得");
+      assert.ok(!(await card.getAttribute("aria-label")).includes(p.id));
+      await card.click();
+      assert.equal(await page.locator("#programDialogTitle .program-title-label").textContent(), "番組情報未取得");
+      assert.ok((await page.locator("#programDialogMeta").textContent()).includes(p.id));
+      await page.keyboard.press("Escape");
+    }
+    assert.equal(await page.locator('.schedule-card[data-program-id="normal-name-id"] .program-title-label').textContent(), "残す番組名");
+  } finally { await context.close(); }
+});
+
 test("mobile guide list launcher leaves program titles unobstructed", async t => {
   for (const width of [320, 375, 553, 760]) await t.test(String(width), async () => {
     const { page, context } = await pageFor({ viewport: { width, height: 871 }, hasTouch: true, colorScheme: "dark" });

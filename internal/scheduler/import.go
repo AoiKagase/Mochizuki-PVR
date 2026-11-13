@@ -35,6 +35,7 @@ func BuildSchedule(cfg *config.Config, services []mirakurun.Service, programs []
 }
 
 func buildSchedule(services []mirakurun.Service, programs []mirakurun.Program) []legacy.ChannelSchedule {
+	programs = resolveSharedProgramMetadata(programs)
 	channels := make([]legacy.ChannelSchedule, 0, len(services))
 	for i, service := range services {
 		channel := legacy.ChannelSchedule{

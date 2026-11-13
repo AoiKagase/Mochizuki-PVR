@@ -730,12 +730,23 @@
   }
 
   function programTitle(program) {
-    var raw = program && (program.title || program.fullTitle) || "";
-    return normalizeAribExternalFlags(stripProgramFlags(raw)) || program.id || "無題";
+    var titles = [program && program.title, program && program.fullTitle];
+    for (var i = 0; i < titles.length; i += 1) {
+      var title = normalizeAribExternalFlags(stripProgramFlags(String(titles[i] || ""))).trim();
+      if (title) return title;
+    }
+    return "番組情報未取得";
   }
 
   function programFullTitle(program) {
-    return normalizeAribExternalFlags(program.fullTitle || program.title || program.id || "無題");
+    var titles = [program && program.fullTitle, program && program.title];
+    for (var i = 0; i < titles.length; i += 1) {
+      var raw = String(titles[i] || "").trim();
+      if (!stripProgramFlags(raw).trim()) continue;
+      var title = normalizeAribExternalFlags(raw).trim();
+      if (title) return title;
+    }
+    return "番組情報未取得";
   }
 
   function programFlagNames(program) {
@@ -837,9 +848,9 @@
     }
     var flags = programFlagNames(program);
     var displayProgram = cloneProgram(program || {});
-    var rawTitle = displayProgram.fullTitle || displayProgram.title || displayProgram.id || "無題";
+    var rawTitle = String(displayProgram.fullTitle || "").trim() || String(displayProgram.title || "").trim();
     displayProgram.title = normalizeAribExternalFlags(stripProgramFlags(rawTitle));
-    displayProgram.fullTitle = normalizeAribExternalFlags(rawTitle);
+    displayProgram.fullTitle = rawTitle;
     root.innerHTML = "";
     flags.forEach(function (flag) {
       var badge = document.createElement("span");
@@ -5341,7 +5352,11 @@
     state.selectedProgram = program;
     state.activeProgramID = program && program.id ? program.id : "";
     setProgramTitleContent(title, program);
-    setProgramMeta(meta, [formatTime(program.start) + " - " + formatTime(end), channelName(program), formatDuration(program.start, end)], program);
+    var metadata = [formatTime(program.start) + " - " + formatTime(end), channelName(program), formatDuration(program.start, end)];
+    if (programTitle(program) === "番組情報未取得" && program.id) {
+      metadata.push("番組ID: " + program.id);
+    }
+    setProgramMeta(meta, metadata, program);
     renderProgramDialogPreview(preview, program);
     text(description, program.detail || program.description || "番組説明はありません。");
     if (actions) {

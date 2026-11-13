@@ -1177,7 +1177,7 @@ func TestNativeDashboardShowsProgramCategoryChips(t *testing.T) {
 			`function renderProgramMeta(parts, program, className)`,
 			`function setProgramMeta(root, parts, program)`,
 			`var meta = renderProgramMeta(parts, program);`,
-			`setProgramMeta(meta, [formatTime(program.start) + " - " + formatTime(end), channelName(program), formatDuration(program.start, end)], program);`,
+			`setProgramMeta(meta, metadata, program);`,
 			`value.indexOf("cinema") >= 0`,
 			`return " category-information";`,
 		},
