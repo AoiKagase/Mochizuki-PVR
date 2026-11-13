@@ -512,6 +512,64 @@ test("guide prioritizes readable titles at every zoom without changing program t
   });
 });
 
+test("guide wraps program titles and fills remaining space with safe description text", async t => {
+  for (const width of [390, 1440]) for (const colorScheme of ["light", "dark"]) await t.test(width + " " + colorScheme, async () => {
+    const { page, context } = await pageFor({ viewport: { width, height: 900 }, colorScheme, hasTouch: width < 1024 });
+    try {
+      const start = now + 60000;
+      const title = "日本の山と海をめぐる旅　四季の風景と地域の暮らしを訪ねて　山里から港町へ、受け継がれてきた営みを記録";
+      const detail = ("土地の歴史や暮らしを紹介します。旅先で出会った人々の物語をお届けします。\n").repeat(20) + '<img src=x onerror="alert(1)">';
+      const programs = [
+        { ...program, id: "wrap-long", title, detail, start, end: start + 7200000, seconds: 7200 },
+        { ...program, id: "wrap-short", title: "気象情報", detail, start: start + 7200000, end: start + 7260000, seconds: 60 },
+        { ...program, id: "wrap-fallback", detail: "", description: "descriptionフィールドの説明文", start: start + 7260000, end: start + 10860000 },
+        { ...program, id: "wrap-empty", detail: "", start: start + 10860000, end: start + 14460000 }
+      ];
+      const schedule = Array.from({ length: 8 }, (_, i) => {
+        const station = i ? { ...channel, id: "wrap-channel-" + i, name: "監査チャンネル" + i, sid: 101 + i } : channel;
+        return { channel: station, programs: programs.map(p => ({ ...p, id: i ? p.id + "-" + i : p.id, channel: station })) };
+      });
+      await page.route("**/api/schedule", route => route.fulfill({ json: schedule }));
+      await loaded(page, "schedule");
+      const card = page.locator('.schedule-card[data-program-id="wrap-long"]');
+      await card.waitFor();
+      const description = card.locator(".schedule-card-description");
+      assert.equal(await description.count(), 1);
+      assert.equal(await description.textContent(), detail);
+      assert.equal(await card.locator("img").count(), 0);
+      const measureText = card => {
+        const title = card.querySelector("strong"), description = card.querySelector(".schedule-card-description");
+        const box = card.getBoundingClientRect(), a = title.getBoundingClientRect(), b = description.getBoundingClientRect();
+        return { titleHeight: a.height, lineHeight: parseFloat(getComputedStyle(title).lineHeight), titleRight: a.right, cardRight: box.right, titleBottom: a.bottom, descriptionTop: b.top, descriptionBottom: b.bottom, cardBottom: box.bottom, descriptionHeight: b.height, descriptionScroll: description.scrollHeight, overflow: getComputedStyle(description).overflowY };
+      };
+      const geometry = await card.evaluate(measureText);
+      assert.ok(geometry.titleHeight > geometry.lineHeight, JSON.stringify(geometry));
+      assert.ok(geometry.titleRight <= geometry.cardRight && geometry.titleBottom <= geometry.descriptionTop, JSON.stringify(geometry));
+      assert.ok(geometry.descriptionHeight >= geometry.lineHeight && geometry.descriptionBottom <= geometry.cardBottom, JSON.stringify(geometry));
+      assert.ok(geometry.descriptionScroll > geometry.descriptionHeight, JSON.stringify(geometry));
+      assert.equal(geometry.overflow, "hidden");
+      assert.ok(Math.abs(geometry.descriptionHeight / geometry.lineHeight - Math.round(geometry.descriptionHeight / geometry.lineHeight)) < 0.01, JSON.stringify(geometry));
+      await page.setViewportSize({ width: width === 390 ? 553 : 1700, height: 900 });
+      await page.waitForTimeout(100);
+      const resized = await card.evaluate(measureText);
+      assert.ok(Math.abs(resized.descriptionHeight / resized.lineHeight - Math.round(resized.descriptionHeight / resized.lineHeight)) < 0.01, JSON.stringify(resized));
+      assert.equal(await page.locator('.schedule-card[data-program-id="wrap-fallback"] .schedule-card-description').textContent(), "descriptionフィールドの説明文");
+      assert.equal(await page.locator('.schedule-card[data-program-id="wrap-empty"] .schedule-card-description').count(), 0);
+      const short = await page.locator('.schedule-card[data-program-id="wrap-short"]').evaluate(card => {
+        const a = card.getBoundingClientRect(), title = card.querySelector("strong").getBoundingClientRect();
+        return { height: a.height, titleHeight: title.height, titleFits: title.top >= a.top && title.bottom <= a.bottom, overflow: getComputedStyle(card).overflowY };
+      });
+      assert.ok(short.height >= 24 && short.titleHeight >= 16 && short.titleFits, JSON.stringify(short));
+      assert.equal(short.overflow, "hidden");
+      await card.click();
+      await page.locator("#programDialog").waitFor({ state: "visible" });
+      assert.equal(await page.locator("#programDialogDescription").textContent(), detail);
+      await page.keyboard.press("Escape");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width === 390 ? 553 : 1700);
+    } finally { await context.close(); }
+  });
+});
+
 test("mobile guide list launcher leaves program titles unobstructed", async t => {
   for (const width of [320, 375, 553, 760]) await t.test(String(width), async () => {
     const { page, context } = await pageFor({ viewport: { width, height: 871 }, hasTouch: true, colorScheme: "dark" });

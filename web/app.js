@@ -1552,6 +1552,7 @@
     var sync = function () {
       stickyOffsetSyncFrame = 0;
       syncStickyOffsets();
+      fitScheduleCardText(document.querySelector(".schedule-guide-scroll"));
     };
     stickyOffsetSyncFrame = window.requestAnimationFrame ? window.requestAnimationFrame(sync) : window.setTimeout(sync, 0);
   }
@@ -4990,6 +4991,7 @@
           lane.appendChild(line);
         }
       });
+      fitScheduleCardText(scroll);
       ensureScheduleRovingTabStop(scroll);
     }
 
@@ -5209,6 +5211,37 @@
     })[0] || null;
   }
 
+  function fitScheduleCardText(root) {
+    if (!root) {
+      return;
+    }
+    var records = scheduleCards(root).map(function (card) {
+      return { title: card.querySelector("strong"), description: card.querySelector(".schedule-card-description") };
+    });
+    // Reset old limits for responsive wrapping, then batch layout reads before
+    // writing limits. Only complete lines should be visible at a cell's edge.
+    records.forEach(function (record) {
+      record.title.style.maxHeight = "";
+      if (record.description) record.description.style.maxHeight = "";
+    });
+    var sizes = records.map(function (record) {
+      var titleHeight = record.title.getBoundingClientRect().height;
+      var lineHeight = parseFloat(window.getComputedStyle(record.title).lineHeight);
+      var fittedTitleHeight = Math.max(lineHeight, Math.floor((titleHeight + 0.01) / lineHeight) * lineHeight);
+      var descriptionHeight = record.description ? record.description.getBoundingClientRect().height : 0;
+      var descriptionLineHeight = record.description ? parseFloat(window.getComputedStyle(record.description).lineHeight) : 1;
+      return {
+        record: record,
+        titleHeight: fittedTitleHeight,
+        descriptionHeight: Math.max(0, Math.floor((descriptionHeight + Math.max(0, titleHeight - fittedTitleHeight) + 0.01) / descriptionLineHeight) * descriptionLineHeight)
+      };
+    });
+    sizes.forEach(function (size) {
+      size.record.title.style.maxHeight = size.titleHeight + "px";
+      if (size.record.description) size.record.description.style.maxHeight = size.descriptionHeight + "px";
+    });
+  }
+
   function renderScheduleCard(program, timeline, channelIndex) {
     program = decorateProgramState(program);
     var card = document.createElement("article");
@@ -5225,7 +5258,8 @@
     card.style.top = top + "px";
     card.style.height = height + "px";
     // Density follows the actual space at the current zoom, not the broadcast
-    // duration. Full details remain in the accessible name and the dialog.
+    // duration. The title and description fill the available space; the
+    // tooltip and dialog retain their full text when the card clips it.
     card.classList.toggle("compact", height < 88);
     card.classList.toggle("title-only", height < 48);
     card.classList.toggle("selected", isActiveProgram(program));
@@ -5266,6 +5300,13 @@
     card.appendChild(time);
     card.appendChild(title);
     card.appendChild(meta);
+    var description = program.detail || program.description || "";
+    if (description) {
+      var descriptionText = document.createElement("span");
+      descriptionText.className = "schedule-card-description";
+      descriptionText.textContent = description;
+      card.appendChild(descriptionText);
+    }
     card.addEventListener("click", function () {
       updateScheduleRovingSelection(card, false);
       openProgramDialog(program);

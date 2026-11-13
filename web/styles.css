@@ -1630,8 +1630,8 @@ summary:focus-visible,
   position: absolute;
   left: 0;
   right: 0;
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 2px;
   min-height: 0;
   overflow: hidden;
@@ -1643,6 +1643,10 @@ summary:focus-visible,
   background: var(--panel-schedule);
   color: var(--ink);
   cursor: pointer;
+}
+
+.schedule-card > * {
+  flex: 0 0 auto;
 }
 
 .schedule-card:hover {
@@ -1753,6 +1757,7 @@ summary:focus-visible,
 
 .schedule-card-state {
   justify-self: start;
+  align-self: flex-start;
   max-width: 100%;
   padding: 0 4px;
   border: 1px solid var(--reserved);
@@ -1786,28 +1791,39 @@ summary:focus-visible,
 }
 
 .schedule-card strong {
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
+  display: block;
+  flex: 0 1 auto;
   min-height: 16px;
   overflow: hidden;
   font-size: 12px;
   line-height: 16px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .schedule-card .program-title-label {
+  white-space: normal;
+}
+
+.schedule-card-description {
+  flex: 1 1 0;
+  min-height: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .schedule-card .program-flag-badge {
   min-width: 15px;
   min-height: 14px;
   padding: 0 3px;
+  margin-right: 4px;
   border-radius: 2px;
   font-size: 11px !important;
+  vertical-align: top;
 }
 
 .schedule-card.compact .schedule-card-state,
