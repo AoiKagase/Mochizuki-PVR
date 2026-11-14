@@ -37,8 +37,9 @@
     header {
       display: flex;
       align-items: center;
-      min-height: 48px;
-      padding: 10px 16px;
+      gap: 16px;
+      min-height: 64px;
+      padding: 12px 20px;
       min-width: 0;
       border-bottom: 1px solid var(--player-line);
       background: var(--player-panel);
@@ -48,14 +49,15 @@
       margin: 0;
       min-width: 0;
       overflow: hidden;
-      font-size: 15px;
-      font-weight: 600;
+      font-size: 16px;
+      font-weight: 500;
       line-height: 1.4;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     main {
+      position: relative;
       min-height: 0;
       display: grid;
       place-items: center;
@@ -65,8 +67,8 @@
     video {
       width: 100%;
       height: 100%;
-      max-height: calc(100svh - 49px);
-      max-height: calc(100dvh - 49px);
+      max-height: calc(100svh - 65px);
+      max-height: calc(100dvh - 65px);
       background: var(--player-video-bg);
       object-fit: contain;
     }
@@ -82,28 +84,46 @@
     }
 
     .message {
-      display: grid;
-      justify-items: center;
-      gap: 12px;
-      margin: 24px;
+      position: absolute;
+      right: 16px;
+      bottom: 20px;
+      left: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 16px;
+      border: 1px solid var(--player-line);
+      border-radius: 12px;
+      background: var(--player-panel);
       color: var(--player-ink-soft);
       font-size: 14px;
-      text-align: center;
+      line-height: 1.5;
     }
+
+    .source-label { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; color: var(--player-ink-soft); font-size: 12px; }
+    .source-label[data-live]::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #8fc6bc; }
 
     .message p {
       margin: 0;
+    }
+
+    .message[hidden] {
+      display: none;
     }
 
     .message button {
       min-height: 44px;
       padding: 0 16px;
       border: 1px solid var(--player-line);
-      border-radius: 6px;
+      flex: 0 0 auto;
+      border-radius: 8px;
       background: var(--player-panel);
       color: var(--player-ink);
       font: inherit;
-      font-weight: 700;
+      font-weight: 500;
       cursor: pointer;
     }
 
@@ -124,16 +144,22 @@
     @media (max-width: 520px) {
       header {
         padding-inline: 12px;
+        gap: 12px;
       }
 
       .message {
-        margin: 20px 16px;
+        right: 12px;
+        left: 12px;
+        bottom: 12px;
+        padding: 12px;
+        font-size: 13px;
       }
     }
   </style>
 </head>
 <body>
   <header>
+    <span class="source-label" id="sourceLabel">視聴</span>
     <h1 id="title">視聴</h1>
   </header>
   <main>
@@ -147,6 +173,7 @@
   </main>
   <script src="/mpegts.js"></script>
   <script src="/player-orientation.js"></script>
+  <script src="/player-runtime.js"></script>
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
@@ -160,9 +187,6 @@
       var messageText = document.getElementById("messageText");
       var retryButton = document.getElementById("retryButton");
       var resolvedSrc = "";
-      var recoveryTimer = 0;
-      var reconnectAttempts = 0;
-      var maxReconnectAttempts = 5;
       var playbackSessionToken = "";
       var msePlayer = null;
       var subtitleAbort = null;
@@ -172,6 +196,25 @@
       var liveCueLimit = 128;
       document.title = title;
       titleNode.textContent = title;
+      var sourceLabel = document.getElementById("sourceLabel");
+      if (/\/api\/channel\//.test(src || "")) {
+        sourceLabel.textContent = "LIVE";
+        sourceLabel.setAttribute("data-live", "");
+      } else if (/\/api\/recording\//.test(src || "")) {
+        sourceLabel.textContent = "録画中";
+      } else if (/\/api\/recorded\//.test(src || "")) {
+        sourceLabel.textContent = "録画済み";
+      }
+      var recovery = window.MochizukiPlayer.createRecovery(video, {
+        enabled: function () { return Boolean(resolvedSrc); },
+        retryEnded: function () { return /\/api\/(?:channel|recording)\//.test(src || ""); },
+        reload: function () { loadVideo(true); },
+        status: function (text, canRetry) {
+          if (text) showMessage(text, canRetry);
+          else message.hidden = true;
+          video.hidden = false;
+        }
+      });
 
       function showMessage(text, canRetry) {
         video.hidden = true;
@@ -196,10 +239,6 @@
         });
       }
 
-      function isLiveStream() {
-        return /\/api\/channel\/[^/]+\/(?:hls\/index\.m3u8|watch\.m2ts)(?:\?|$)/.test(src || "");
-      }
-
       function isMSEStream() {
         if (!src || !window.mpegts || typeof window.mpegts.isSupported !== "function" || !window.mpegts.isSupported()) {
           return false;
@@ -212,13 +251,6 @@
         }
       }
 
-      function clearRecoveryTimer() {
-        if (recoveryTimer) {
-          window.clearTimeout(recoveryTimer);
-          recoveryTimer = 0;
-        }
-      }
-
       function newSessionToken() {
         if (window.crypto && typeof window.crypto.randomUUID === "function") {
           return window.crypto.randomUUID().replace(/-/g, "_");
@@ -227,19 +259,7 @@
       }
 
       function stopPlaybackRequest(url) {
-        if (!url) {
-          return Promise.resolve();
-        }
-        var target;
-        try {
-          target = new URL(url, window.location.href);
-        } catch (error) {
-          return Promise.resolve();
-        }
-        if (target.origin !== window.location.origin || !/\/api\/(?:recorded|recording|channel)\/[^/]+\/(?:hls\/index\.m3u8|watch\.(?:mp4|m2ts)|subtitles\.vtt)$/.test(target.pathname)) {
-          return Promise.resolve();
-        }
-        return fetch(target.toString(), { method: "DELETE", keepalive: true }).catch(function () {});
+        return window.MochizukiPlayer.stopRequest(url);
       }
 
       function destroyMSEPlayer() {
@@ -458,33 +478,18 @@
       }
 
       function recoverLivePlayback(reason) {
-        if (!isLiveStream() || recoveryTimer) {
-          return;
-        }
-        if (reconnectAttempts >= maxReconnectAttempts) {
-          showMessage("ライブ視聴を復旧できませんでした。チャンネルの状態を確認して再試行してください。", true);
-          return;
-        }
-        reconnectAttempts += 1;
-        var delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 8000);
-        showMessage(reason + " 自動的に再接続しています（" + reconnectAttempts + "/" + maxReconnectAttempts + "）。", false);
-        recoveryTimer = window.setTimeout(function () {
-          recoveryTimer = 0;
-          loadVideo(true);
-        }, delay);
+        recovery.fail(reason);
       }
 
       function loadVideo(isRecovery) {
-        clearRecoveryTimer();
+        recovery.cancel();
         if (!src) {
           showMessage("再生 URL が指定されていません。", false);
           return;
         }
-        if (!isRecovery) {
-          reconnectAttempts = 0;
-        }
         var generation = ++loadGeneration;
         try {
+          var elapsed = Math.floor(video.currentTime || 0);
           var previousMedia = resolvedSrc || video.src;
           var previousSubtitle = subtitleTrack.getAttribute("src");
           stopLiveSubtitles();
@@ -496,6 +501,11 @@
           subtitleTrack.removeAttribute("src");
           playbackSessionToken = newSessionToken();
           var mediaURL = new URL(src, window.location.href);
+          if (isRecovery && /\/api\/recorded\//.test(mediaURL.pathname) && resolvedSrc) {
+            var previousURL = new URL(resolvedSrc);
+            mediaURL.searchParams.set("ss", String(Number(previousURL.searchParams.get("ss") || 0) + elapsed));
+            if (previousURL.searchParams.has("t")) mediaURL.searchParams.set("t", String(Math.max(1, Number(previousURL.searchParams.get("t")) - elapsed)));
+          }
           mediaURL.searchParams.set("session", playbackSessionToken);
           if (isRecovery) {
             mediaURL.searchParams.set("reconnect", String(Date.now()));
@@ -508,6 +518,7 @@
             if (generation !== loadGeneration) {
               return;
             }
+            recovery.start(isRecovery === true);
             try {
               if (isMSEStream()) {
                 var logging = window.mpegts.LoggingControl;
@@ -541,6 +552,9 @@
               }
               if (subtitles) {
                 var subtitleURL = new URL(subtitles, window.location.href);
+                ["ss", "t"].forEach(function (key) {
+                  if (mediaURL.searchParams.has(key)) subtitleURL.searchParams.set(key, mediaURL.searchParams.get(key));
+                });
                 subtitleURL.searchParams.set("session", playbackSessionToken);
                 if (isMSEStream()) {
                   startLiveSubtitles(subtitleURL.toString(), generation);
@@ -553,7 +567,8 @@
               message.hidden = true;
               retryButton.hidden = true;
               var playPromise = msePlayer ? msePlayer.play() : video.play();
-              Promise.resolve(playPromise).catch(function () {
+              Promise.resolve(playPromise).catch(function (error) {
+                if (generation === loadGeneration && (!error || error.name !== "NotAllowedError")) recovery.fail("再生を開始できませんでした。");
                 // The browser may require a manual click before playback starts.
               });
             } catch (error) {
@@ -574,29 +589,12 @@
           // mpegts.js reports actionable MSE failures through Events.ERROR.
           return;
         }
-        if (isLiveStream()) {
-          recoverLivePlayback("ライブ配信が中断されました。");
-          return;
-        }
-        showMessage("再生に失敗しました。録画状態と WUI ログを確認して再試行してください。", true);
+        recoverLivePlayback("配信が中断されました。");
       });
-      video.addEventListener("waiting", function () {
-        if (isLiveStream() && !isMSEStream() && !video.paused && !recoveryTimer) {
-          recoveryTimer = window.setTimeout(function () {
-            recoveryTimer = 0;
-            recoverLivePlayback("ライブ配信の受信が遅れています。");
-          }, 12000);
-        }
-      });
-      video.addEventListener("timeupdate", clearRecoveryTimer);
       video.addEventListener("timeupdate", pruneLiveSubtitleCues);
-      video.addEventListener("playing", function () {
-        clearRecoveryTimer();
-        reconnectAttempts = 0;
-      });
       window.addEventListener("pagehide", function () {
         loadGeneration += 1;
-        clearRecoveryTimer();
+        recovery.cancel();
         stopLiveSubtitles();
         destroyMSEPlayer();
         stopPlaybackRequest(resolvedSrc || video.src);

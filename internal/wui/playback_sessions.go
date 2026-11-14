@@ -15,8 +15,9 @@ type playbackRequestSessions struct {
 }
 
 type playbackRequest struct {
-	cancel context.CancelFunc
-	done   chan struct{}
+	cancel   context.CancelFunc
+	done     chan struct{}
+	resource string
 }
 
 func newPlaybackRequestSessions() *playbackRequestSessions {
@@ -24,6 +25,10 @@ func newPlaybackRequestSessions() *playbackRequestSessions {
 }
 
 func (m *playbackRequestSessions) register(parent context.Context, token string) (context.Context, func()) {
+	return m.registerResource(parent, token, "")
+}
+
+func (m *playbackRequestSessions) registerResource(parent context.Context, token, resource string) (context.Context, func()) {
 	if m == nil || !playbackSessionPattern.MatchString(token) {
 		return parent, func() {}
 	}
@@ -36,7 +41,7 @@ func (m *playbackRequestSessions) register(parent context.Context, token string)
 		requests = make(map[uint64]*playbackRequest)
 		m.sessions[token] = requests
 	}
-	request := &playbackRequest{cancel: cancel, done: make(chan struct{})}
+	request := &playbackRequest{cancel: cancel, done: make(chan struct{}), resource: resource}
 	requests[id] = request
 	m.mu.Unlock()
 
@@ -67,7 +72,13 @@ func (m *playbackRequestSessions) stop(token string) int {
 }
 
 func (m *playbackRequestSessions) stopAndWait(ctx context.Context, token string) int {
-	requests := m.take(token)
+	return m.stopResourceAndWait(ctx, token, "")
+}
+
+// An empty resource stops the entire viewing session; subtitle toggles stop
+// only their request, leaving the shared video session alive.
+func (m *playbackRequestSessions) stopResourceAndWait(ctx context.Context, token, resource string) int {
+	requests := m.takeResource(token, resource)
 	for _, request := range requests {
 		request.cancel()
 	}
@@ -82,12 +93,24 @@ func (m *playbackRequestSessions) stopAndWait(ctx context.Context, token string)
 }
 
 func (m *playbackRequestSessions) take(token string) map[uint64]*playbackRequest {
+	return m.takeResource(token, "")
+}
+
+func (m *playbackRequestSessions) takeResource(token, resource string) map[uint64]*playbackRequest {
 	if m == nil || !playbackSessionPattern.MatchString(token) {
 		return nil
 	}
 	m.mu.Lock()
-	requests := m.sessions[token]
-	delete(m.sessions, token)
+	requests := make(map[uint64]*playbackRequest)
+	for id, request := range m.sessions[token] {
+		if resource == "" || request.resource == resource {
+			requests[id] = request
+			delete(m.sessions[token], id)
+		}
+	}
+	if len(m.sessions[token]) == 0 {
+		delete(m.sessions, token)
+	}
 	m.mu.Unlock()
 	return requests
 }

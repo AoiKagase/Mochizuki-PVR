@@ -2719,18 +2719,22 @@ func (s *server) beginPlaybackRequest(r *http.Request) (*http.Request, func()) {
 		manager = newPlaybackRequestSessions()
 		s.playbackRequests = manager
 	}
-	ctx, release := manager.register(r.Context(), r.URL.Query().Get("session"))
+	ctx, release := manager.registerResource(r.Context(), r.URL.Query().Get("session"), r.URL.Path)
 	return r.WithContext(ctx), release
 }
 
 func (s *server) stopPlaybackRequest(w http.ResponseWriter, r *http.Request) {
-	if s.liveMSE != nil {
+	resource := ""
+	if strings.HasSuffix(r.URL.Path, "/subtitles.vtt") {
+		resource = r.URL.Path
+	}
+	if resource == "" && s.liveMSE != nil {
 		s.liveMSE.stop(r.URL.Query().Get("session"))
 	}
 	if s.playbackRequests != nil {
 		ctx, cancel := context.WithTimeout(r.Context(), playbackRequestStopTimeout)
 		defer cancel()
-		s.playbackRequests.stopAndWait(ctx, r.URL.Query().Get("session"))
+		s.playbackRequests.stopResourceAndWait(ctx, r.URL.Query().Get("session"), resource)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -43,6 +43,7 @@ type hlsSession struct {
 	done       chan struct{}
 	err        error
 	timer      *time.Timer
+	viewers    map[string]time.Time
 }
 
 type hlsSessionManager struct {
@@ -85,7 +86,7 @@ func (s *server) handleRecordedHLS(w http.ResponseWriter, r *http.Request, id, r
 			legacyHTTPError(w, r, http.StatusBadRequest)
 			return
 		}
-		s.hls.stop(filePath, quality, start, duration, audio)
+		s.hls.stopViewer(filePath, quality, start, duration, audio, r.URL.Query().Get("session"))
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -127,7 +128,7 @@ func (s *server) handleChannelHLS(w http.ResponseWriter, r *http.Request, channe
 		return
 	}
 	if r.Method == http.MethodDelete {
-		s.hls.stop(channelHLSKey(channelID), quality, start, duration, audio)
+		s.hls.stopViewer(channelHLSKey(channelID), quality, start, duration, audio, r.URL.Query().Get("session"))
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -191,6 +192,13 @@ func (s *server) hlsSubject(r *http.Request) string {
 }
 
 func (s *server) serveHLSPlaylistSession(w http.ResponseWriter, r *http.Request, session *hlsSession) {
+	viewer := r.URL.Query().Get("session")
+	if !playbackSessionPattern.MatchString(viewer) {
+		viewer = ""
+	}
+	if s.hls != nil {
+		s.hls.touchViewer(session.id, viewer)
+	}
 	if session.live && session.failed() {
 		legacyHTTPError(w, r, http.StatusServiceUnavailable)
 		return
@@ -202,6 +210,9 @@ func (s *server) serveHLSPlaylistSession(w http.ResponseWriter, r *http.Request,
 		data, readErr := os.ReadFile(playlist)
 		if readErr == nil {
 			text := addHLSSessionQuery(string(data), session.id)
+			if viewer != "" {
+				text = strings.ReplaceAll(text, "?session="+session.id, "?session="+session.id+"&viewer="+viewer)
+			}
 			w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 			w.Header().Set("Cache-Control", "no-store")
 			if r.Method == http.MethodGet {
@@ -235,6 +246,7 @@ func (s *server) serveHLSSegment(w http.ResponseWriter, r *http.Request, name st
 		legacyHTTPError(w, r, http.StatusNotFound)
 		return
 	}
+	s.hls.touchViewer(session.id, r.URL.Query().Get("viewer"))
 	filePath := filepath.Join(session.dir, name)
 	deadline := time.NewTimer(10 * time.Second)
 	defer deadline.Stop()
@@ -425,6 +437,54 @@ func (m *hlsSessionManager) expire(id string) {
 
 func (m *hlsSessionManager) stop(filePath, quality string, start, duration int, audio string) {
 	m.expireNow(hlsSessionID(filePath, quality, start, duration, audio))
+}
+
+func (m *hlsSessionManager) touchViewer(id, viewer string) {
+	if !playbackSessionPattern.MatchString(viewer) {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if session := m.sessions[id]; session != nil {
+		if session.viewers == nil {
+			session.viewers = make(map[string]time.Time)
+		}
+		now := time.Now()
+		for token, lastAccess := range session.viewers {
+			if now.Sub(lastAccess) > hlsSessionIdleTimeout {
+				delete(session.viewers, token)
+			}
+		}
+		session.viewers[viewer] = now
+	}
+}
+
+func (m *hlsSessionManager) stopViewer(filePath, quality string, start, duration int, audio, viewer string) {
+	id := hlsSessionID(filePath, quality, start, duration, audio)
+	m.mu.Lock()
+	session := m.sessions[id]
+	if session == nil {
+		m.mu.Unlock()
+		return
+	}
+	if viewer != "" {
+		if _, present := session.viewers[viewer]; !present {
+			m.mu.Unlock()
+			return
+		}
+		delete(session.viewers, viewer)
+	}
+	// Unidentified legacy clients must not stop sessions with identified viewers.
+	if len(session.viewers) != 0 {
+		m.mu.Unlock()
+		return
+	}
+	delete(m.sessions, id)
+	if session.timer != nil {
+		session.timer.Stop()
+	}
+	m.mu.Unlock()
+	m.terminate(session)
 }
 
 func (m *hlsSessionManager) expireNow(id string) {

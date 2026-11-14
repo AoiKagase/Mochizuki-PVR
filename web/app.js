@@ -56,6 +56,7 @@
   var mpegtsLoadPromise = null;
   var playerLiveLoadRetry = null;
   var playerSourceStopPromise = Promise.resolve();
+  var playerRecovery = null;
   var pendingConfirmResolve = null;
   var scheduleMenuTouchStart = null;
   var metricsRefreshTimer = null;
@@ -2666,7 +2667,8 @@
     if (!video) {
       return;
     }
-    var duration = playerFiniteDuration(video);
+    var live = /\/api\/channel\//.test(playerCurrentURL);
+    var duration = live ? 0 : playerFiniteDuration(video);
     var currentTime = playerCurrentTime(video, duration);
     if (playButton) {
       setIconOnlyControl(playButton, video.paused ? "play" : "pause", video.paused ? "再生" : "一時停止");
@@ -2679,6 +2681,7 @@
     }
     if (time) {
       time.textContent = duration > 0 ? formatPlayerTime(currentTime) + " / " + formatPlayerTime(duration) : "LIVE";
+      time.classList.toggle("is-live", live);
     }
     if (muteButton) {
       setIconOnlyControl(muteButton, video.muted || video.volume === 0 ? "volume-x" : "volume-2", video.muted || video.volume === 0 ? "ミュート解除" : "ミュート");
@@ -2727,7 +2730,7 @@
     return "再生に失敗しました。録画状態とWUIログを確認して、再試行してください。";
   }
 
-  function retryPlayerSource() {
+  function retryPlayerSource(isRecovery) {
     if (playerLiveLoadRetry) {
       playerLiveLoadRetry();
       return;
@@ -2736,14 +2739,20 @@
       return;
     }
     var query = cloneQuery(playerBaseQuery || {});
+    var video = byId("playerVideo");
+    if (/\/api\/recorded\//.test(playerCurrentURL) && video && video.currentTime > 0) {
+      var elapsed = Math.floor(video.currentTime);
+      query.ss = String(playerQueryStart() + elapsed);
+      if (query.t) query.t = String(Math.max(1, Number(query.t) - elapsed));
+    }
     try {
-      setPlayerSource(playerSourceBuilder(Object.keys(query).length ? query : null), query);
+      setPlayerSource(playerSourceBuilder(Object.keys(query).length ? query : null), query, isRecovery === true);
     } catch (error) {
       setPlayerStatus("再生URLを作成できませんでした。録画状態を確認して再試行してください");
     }
   }
 
-  function setPlayerSource(url, query) {
+  function setPlayerSource(url, query, isRecovery) {
     var video = byId("playerVideo");
     var openLink = byId("playerOpenLink");
     if (openLink) {
@@ -2770,6 +2779,7 @@
     var previousURL = playerCurrentURL;
     var nextToken = newPlaybackSessionToken();
     var nextURL = withPlaybackSession(url, nextToken);
+    if (playerRecovery) playerRecovery.cancel();
     setPlayerStatus("");
     playerCurrentURL = "";
     playerPlaybackToken = "";
@@ -2785,6 +2795,7 @@
       }
       playerCurrentURL = nextURL;
       playerPlaybackToken = nextToken;
+      if (playerRecovery) playerRecovery.start(isRecovery === true);
       try {
         if (isLiveMSEURL(nextURL)) {
           startPlayerMSE(video, nextURL, sourceGeneration);
@@ -2807,7 +2818,8 @@
           return;
         }
         if (!error || error.name !== "NotAllowedError") {
-          setPlayerStatus("再生を開始できませんでした。録画が開始直後の場合は、数秒後に再試行してください");
+          if (playerRecovery) playerRecovery.fail("再生を開始できませんでした。");
+          else setPlayerStatus("再生を開始できませんでした。再試行してください");
         }
         // Browsers may block autoplay; controls remain available for manual start.
       }).finally(function () {
@@ -2850,7 +2862,8 @@
       if (sourceGeneration !== playerSourceGeneration) {
         return;
       }
-      setPlayerStatus("ライブ配信が中断されました。再試行してください。");
+      if (playerRecovery) playerRecovery.fail("ライブ配信が中断されました。");
+      else setPlayerStatus("ライブ配信が中断されました。再試行してください。");
       updatePlayerControls();
     });
     playerMSE.attachMediaElement(video);
@@ -2990,6 +3003,12 @@
     if (!video) {
       return;
     }
+    playerRecovery = window.MochizukiPlayer.createRecovery(video, {
+      enabled: function () { return Boolean(playerCurrentURL && playerSourceBuilder); },
+      retryEnded: function () { return /\/api\/(?:channel|recording)\//.test(playerCurrentURL); },
+      reload: function () { retryPlayerSource(true); },
+      status: function (message, canRetry) { setPlayerStatus(message, canRetry ? "error" : "info"); }
+    });
     ["loadedmetadata", "durationchange", "timeupdate", "play", "pause", "volumechange", "ended", "waiting", "playing"].forEach(function (name) {
       video.addEventListener(name, updatePlayerControls);
     });
@@ -2999,11 +3018,9 @@
       if (!playerCurrentURL) {
         return;
       }
-      setPlayerStatus(playerMediaErrorMessage(video));
+      if (playerRecovery) playerRecovery.fail(playerMediaErrorMessage(video));
+      else setPlayerStatus(playerMediaErrorMessage(video));
       updatePlayerControls();
-    });
-    video.addEventListener("playing", function () {
-      setPlayerStatus("");
     });
     video.addEventListener("timeupdate", function () {
       prunePlayerLiveSubtitleCues(video.currentTime);
@@ -3537,6 +3554,7 @@
 
   function stopPlayerVideo() {
     playerLiveLoadRetry = null;
+    if (playerRecovery) playerRecovery.cancel();
     var video = byId("playerVideo");
     if (!video) {
       return;
@@ -3579,10 +3597,7 @@
   }
 
   function stopPlaybackRequest(url) {
-    if (!url || !/\/api\/(?:recorded|recording|channel)\/[^/]+\/(?:hls\/index\.m3u8|watch\.(?:mp4|m2ts)|subtitles\.vtt)(?:\?|$)/.test(url)) {
-      return Promise.resolve();
-    }
-    return fetch(url, { method: "DELETE", keepalive: true }).catch(function () {});
+    return window.MochizukiPlayer.stopRequest(url);
   }
 
   function queuePlaybackStop(url) {

@@ -1074,7 +1074,7 @@ func TestPlayersAbortSubtitleRequestsWhenClosed(t *testing.T) {
 			`queuePlaybackStop(previousURL).finally(function ()`,
 			`sourceGeneration !== playerSourceGeneration`,
 			`queuePlaybackStop(playerCurrentURL);`,
-			`return fetch(url, { method: "DELETE", keepalive: true })`,
+			`return window.MochizukiPlayer.stopRequest(url);`,
 		},
 		filepath.Join("..", "..", "web", "player.html"): {
 			`window.addEventListener("pagehide"`,
@@ -5682,6 +5682,7 @@ func TestStaticServingUsesEmbeddedAssetsWithoutExternalDirectory(t *testing.T) {
 		{path: "/app.js", contentType: "application/javascript", contains: "playerSubtitleSourceBuilder"},
 		{path: "/app.js", contentType: "application/javascript", contains: "removeStaleLiveSubtitleCues"},
 		{path: "/mpegts.js", contentType: "application/javascript", contains: `return"1.8.0"`},
+		{path: "/player-runtime.js", contentType: "application/javascript", contains: "MochizukiPlayer"},
 	} {
 		req := httptest.NewRequest(http.MethodGet, test.path, nil)
 		res := httptest.NewRecorder()
