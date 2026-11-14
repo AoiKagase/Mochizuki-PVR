@@ -2130,25 +2130,24 @@ summary:focus-visible,
 
 .player-controls {
   display: grid;
-  grid-template-columns: 44px minmax(96px, 1fr) 44px 96px repeat(4, 44px);
+  grid-template-columns: 44px 44px 64px auto minmax(0, 1fr) repeat(4, 44px);
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px 12px;
-  border-top: 1px solid var(--player-line);
-  background: var(--player-panel);
+  gap: 0 4px;
+  padding: 0 12px 4px;
+  background: var(--player-bg);
   color: var(--player-ink);
   transition: opacity 160ms ease-out, transform 160ms ease-out;
 }
 
-#playerSeek { grid-column: 1 / -1; grid-row: 1; }
+#playerSeek { grid-column: 5; grid-row: 2; }
 #playerPlayButton { grid-column: 1; grid-row: 2; }
-#playerTime { grid-column: 2; grid-row: 2; }
-#playerMuteButton { grid-column: 3; grid-row: 2; }
-#playerVolume { grid-column: 4; grid-row: 2; }
-#playerSettings { grid-column: 5; grid-row: 2; }
-#playerPictureInPictureButton { grid-column: 6; grid-row: 2; }
-#playerFullscreenButton { grid-column: 7; grid-row: 2; }
-#playerOpenLink { grid-column: 8; grid-row: 2; }
+#playerMuteButton { grid-column: 2; grid-row: 2; }
+#playerVolume { grid-column: 3; grid-row: 2; }
+#playerTime { grid-column: 4; grid-row: 2; padding-inline: 12px; }
+#playerSettings { grid-column: 6; grid-row: 2; }
+#playerPictureInPictureButton { grid-column: 7; grid-row: 2; }
+#playerFullscreenButton { grid-column: 8; grid-row: 2; }
+#playerOpenLink { grid-column: 9; grid-row: 2; }
 
 .player-control-button,
 .player-control-link {
@@ -2159,10 +2158,10 @@ summary:focus-visible,
   min-height: 44px;
   min-width: 44px;
   padding: 0 12px;
-  border: 1px solid var(--player-line);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 6px;
   background: transparent;
-  color: var(--player-ink);
+  color: var(--player-ink-soft);
   font-size: 12px;
   font-weight: 500;
   text-decoration: none;
@@ -2174,9 +2173,7 @@ summary:focus-visible,
 .player-controls .icon { width: 18px; height: 18px; stroke-width: 1.5; }
 
 #playerPlayButton {
-  border-color: transparent;
-  background: var(--player-ink);
-  color: var(--player-bg);
+  color: var(--player-ink);
 }
 
 .player-controls :is(button, a, summary, input, select):focus-visible {
@@ -2193,10 +2190,11 @@ summary:focus-visible,
 
 .player-control-button:hover,
 .player-control-link:hover {
-  border-color: var(--player-control-hover-line);
-  background: var(--player-control-hover-surface);
+  background: var(--player-control-surface);
   color: var(--player-control-hover-ink);
 }
+
+.player-settings[open] > summary { background: var(--player-control-surface); color: var(--player-ink); }
 
 .player-control-link[hidden] {
   display: none;
@@ -2212,18 +2210,66 @@ summary:focus-visible,
   flex: 1 1 180px;
   min-width: 0;
   width: 100%;
-  height: 24px;
+  height: 44px;
   margin: 0;
-  accent-color: #8fc6bc;
 }
+
+.player-seek:disabled { display: none; }
 
 .player-volume {
   flex: 0 1 92px;
   min-width: 0;
   width: 100%;
   margin: 0;
-  accent-color: #8fc6bc;
+  height: 44px;
 }
+
+.player-controls input[type="range"] {
+  --range-progress: 0%;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.player-controls input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--player-ink-soft) var(--range-progress), var(--player-line) var(--range-progress));
+}
+
+.player-controls input[type="range"]::-moz-range-track { height: 3px; border-radius: 2px; background: var(--player-line); }
+.player-controls input[type="range"]::-moz-range-progress { height: 3px; border-radius: 2px; background: var(--player-ink-soft); }
+
+.player-controls input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 8px;
+  height: 8px;
+  margin-top: -2.5px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--player-ink);
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+.player-controls input[type="range"]::-moz-range-thumb {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--player-ink);
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+.player-controls input[type="range"]:is(:hover, :focus-visible, :active)::-webkit-slider-thumb { opacity: 1; }
+.player-controls input[type="range"]:is(:hover, :focus-visible, :active)::-moz-range-thumb { opacity: 1; }
 
 .player-time {
   flex: 0 0 auto;
@@ -2231,7 +2277,7 @@ summary:focus-visible,
   color: var(--player-ink-soft);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
+  font-weight: 400;
   text-align: left;
   white-space: nowrap;
 }
@@ -3575,8 +3621,8 @@ body.view-settings .settings-grid {
   .player-controls {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 4px;
-    padding: 8px;
+    gap: 0 4px;
+    padding: 4px 8px;
   }
 
   .player-dialog { width: calc(100vw - 16px); border-radius: 12px; }
@@ -3594,6 +3640,7 @@ body.view-settings .settings-grid {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-inline: 4px;
   }
 
   #playerMuteButton {
