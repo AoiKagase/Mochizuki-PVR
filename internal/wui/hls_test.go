@@ -225,3 +225,75 @@ func TestValidHLSSegmentName(t *testing.T) {
 		}
 	}
 }
+
+func TestHLSViewerStopKeepsOtherViewer(t *testing.T) {
+	m := newHLSSessionManager(Paths{})
+	dir := t.TempDir()
+	for name, data := range map[string]string{"index.m3u8": "#EXTM3U\n#EXTINF:4,\nsegment00000.ts\n", "segment00000.ts": "segment"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(data), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	id := hlsSessionID(channelHLSKey("abc"), "540p", 0, 0, "")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() { <-ctx.Done(); close(done) }()
+	timer := time.NewTimer(time.Hour)
+	defer timer.Stop()
+	session := &hlsSession{id: id, dir: dir, cancel: cancel, done: done, timer: timer}
+	m.sessions[id] = session
+	s := &server{hls: m}
+	viewers := []string{"first_viewer_1234567890", "second_viewer_1234567890"}
+	for _, viewer := range viewers {
+		res := httptest.NewRecorder()
+		s.serveHLSPlaylistSession(res, httptest.NewRequest("GET", "/api/channel/abc/hls/index.m3u8?session="+viewer, nil), session)
+		if res.Code != 200 {
+			t.Fatalf("join: %d", res.Code)
+		}
+	}
+	stop := func(token string) {
+		t.Helper()
+		res := httptest.NewRecorder()
+		s.handleChannelHLS(res, httptest.NewRequest("DELETE", "/api/channel/abc/hls/index.m3u8?session="+token, nil), "abc", "index", "m3u8")
+		if res.Code != 204 {
+			t.Fatalf("stop: %d", res.Code)
+		}
+	}
+	stop("unknown_viewer_1234567890")
+	stop(viewers[0])
+	res := httptest.NewRecorder()
+	s.serveHLSSegment(res, httptest.NewRequest("GET", "/api/channel/abc/hls/segment00000.ts?session="+id+"&viewer="+viewers[1], nil), "segment00000.ts")
+	if res.Code != 200 || res.Body.String() != "segment" {
+		t.Fatalf("remaining viewer: status=%d body=%q", res.Code, res.Body.String())
+	}
+	stop(viewers[0]) // Duplicate/late DELETE must not affect the survivor either.
+	if ctx.Err() != nil {
+		t.Fatal("the surviving viewer's conversion was stopped")
+	}
+	stop(viewers[1])
+	if ctx.Err() != context.Canceled {
+		t.Fatal("last viewer did not stop conversion")
+	}
+	if m.lookup(id) != nil {
+		t.Fatal("last viewer left the session registered")
+	}
+}
+
+func TestHLSPlaylistCarriesViewerIntoSegments(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.m3u8"), []byte("#EXTM3U\n#EXTINF:4,\nsegment00000.ts\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	id := hlsSessionID(channelHLSKey("abc"), "540p", 0, 0, "")
+	token := "viewer_heartbeat_1234567890"
+	session := &hlsSession{id: id, dir: dir}
+	m := newHLSSessionManager(Paths{})
+	m.sessions[id] = session
+	s := &server{hls: m}
+	res := httptest.NewRecorder()
+	s.serveHLSPlaylistSession(res, httptest.NewRequest("GET", "/api/channel/abc/hls/index.m3u8?session="+token, nil), session)
+	if !strings.Contains(res.Body.String(), "session="+id+"&viewer="+token) {
+		t.Fatalf("viewer not carried into segments: %s", res.Body.String())
+	}
+}

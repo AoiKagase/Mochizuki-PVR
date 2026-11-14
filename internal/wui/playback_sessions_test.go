@@ -103,3 +103,45 @@ func TestServerPlaybackDeleteCancelsMatchingRequest(t *testing.T) {
 		t.Fatalf("status = %d", response.Code)
 	}
 }
+
+func TestSubtitleDeleteKeepsVideoRequest(t *testing.T) {
+	for _, collection := range []string{"recorded", "recording", "channel"} {
+		t.Run(collection, func(t *testing.T) {
+			s := &server{playbackRequests: newPlaybackRequestSessions()}
+			token := "subtitle_scope_1234567890"
+			base := "/api/" + collection + "/abc/"
+			video, releaseVideo := s.beginPlaybackRequest(httptest.NewRequest("GET", base+"watch.mp4?session="+token, nil))
+			defer releaseVideo()
+			captions, releaseCaptions := s.beginPlaybackRequest(httptest.NewRequest("GET", base+"subtitles.vtt?session="+token, nil))
+			go func() { <-captions.Context().Done(); releaseCaptions() }()
+			// Release a cancelled video even on the broken implementation so DELETE cannot hang.
+			go func() { <-video.Context().Done(); releaseVideo() }()
+			response := httptest.NewRecorder()
+			s.stopPlaybackRequest(response, httptest.NewRequest("DELETE", base+"subtitles.vtt?session="+token, nil))
+			if response.Code != http.StatusNoContent || captions.Context().Err() != context.Canceled {
+				t.Fatalf("subtitle stop: status=%d error=%v", response.Code, captions.Context().Err())
+			}
+			if err := video.Context().Err(); err != nil {
+				t.Fatalf("subtitle DELETE cancelled video: %v", err)
+			}
+		})
+	}
+}
+
+func TestSubtitleDeleteKeepsSharedMSESession(t *testing.T) {
+	token := "mse_subtitle_scope_1234567890"
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() { <-ctx.Done(); close(done) }()
+	s := &server{liveMSE: newLiveMSESessionManager(), playbackRequests: newPlaybackRequestSessions()}
+	s.liveMSE.sessions[token] = &liveMSESession{ctx: ctx, cancel: cancel, done: done}
+	response := httptest.NewRecorder()
+	s.stopPlaybackRequest(response, httptest.NewRequest("DELETE", "/api/channel/abc/subtitles.vtt?mode=mse&session="+token, nil))
+	if ctx.Err() != nil {
+		t.Fatal("subtitle DELETE stopped the shared MSE video session")
+	}
+	if s.liveMSE.sessions[token] == nil {
+		t.Fatal("subtitle DELETE removed the shared MSE session")
+	}
+}
