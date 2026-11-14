@@ -1,0 +1,59 @@
+[
+  {
+    "name": "subtitle-off-deletes-video-session",
+    "status": "reproduced",
+    "errors": [],
+    "src": "/api/recorded/audit/watch.mp4?s=960x540&b%3Av=900k&b%3Aa=64k&session=80770584_b3f9_4c1a_b376_6b6c737d84c4",
+    "events": [
+      {
+        "method": "DELETE",
+        "path": "/api/recorded/audit/subtitles.vtt",
+        "session": "80770584_b3f9_4c1a_b376_6b6c737d84c4"
+      },
+      {
+        "event": "media-cancelled-by-delete",
+        "path": "/api/recorded/audit/subtitles.vtt",
+        "token": "80770584_b3f9_4c1a_b376_6b6c737d84c4"
+      }
+    ],
+    "videoSourceUnchanged": true
+  },
+  {
+    "name": "pending-delete-blocks-switch-and-reopen",
+    "status": "reproduced",
+    "errors": [],
+    "blockedAfterReopen": null,
+    "resumedAfterDeleteResponse": true
+  },
+  {
+    "name": "standalone-hidden-message-visible",
+    "status": "reproduced",
+    "errors": [],
+    "hidden": true,
+    "display": "grid",
+    "text": "再生 URL が指定されていません。"
+  },
+  {
+    "name": "mse-reconnect-tail-timeupdate-false",
+    "status": "reproduced",
+    "errors": [],
+    "players": 2,
+    "videoHidden": false,
+    "message": "ライブ配信が中断されました。 自動的に再接続しています（1/5）。"
+  },
+  {
+    "name": "mse-reconnect-tail-timeupdate-true",
+    "status": "reproduced",
+    "errors": [],
+    "players": 1,
+    "videoHidden": true,
+    "message": "ライブ配信が中断されました。 自動的に再接続しています（1/5）。"
+  },
+  {
+    "name": "live-mp4-no-auto-reconnect",
+    "status": "reproduced",
+    "errors": [],
+    "getsAfter40Seconds": 1,
+    "message": "再生に失敗しました。録画状態と WUI ログを確認して再試行してください。"
+  }
+]
