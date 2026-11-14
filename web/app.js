@@ -2678,6 +2678,7 @@
       if (!playerSeeking) {
         seek.value = duration > 0 ? String(Math.min(1000, Math.max(0, Math.round((currentTime / duration) * 1000)))) : "0";
       }
+      seek.style.setProperty("--range-progress", (Number(seek.value) / 10) + "%");
     }
     if (time) {
       time.textContent = duration > 0 ? formatPlayerTime(currentTime) + " / " + formatPlayerTime(duration) : "LIVE";
@@ -2689,6 +2690,7 @@
     if (volume && document.activeElement !== volume) {
       volume.value = String(video.muted ? 0 : video.volume);
     }
+    if (volume) volume.style.setProperty("--range-progress", (Number(volume.value) * 100) + "%");
     if (pictureInPictureButton) {
       var pictureInPictureAvailable = Boolean(document.pictureInPictureEnabled && typeof video.requestPictureInPicture === "function");
       var pictureInPictureActive = document.pictureInPictureElement === video;
@@ -7786,6 +7788,7 @@
     if (playerSeek) {
       playerSeek.addEventListener("input", function () {
         playerSeeking = true;
+        playerSeek.style.setProperty("--range-progress", (Number(playerSeek.value) / 10) + "%");
       });
       playerSeek.addEventListener("change", function () {
         seekPlayerToRange();
