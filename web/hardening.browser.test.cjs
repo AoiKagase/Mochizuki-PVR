@@ -88,6 +88,39 @@ async function capture(page, name) {
   }
 }
 
+test("manual recording stop confirms saving with a stop button", async () => {
+  const { page, context } = await pageFor();
+  try {
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    let stopped = false;
+    let stopRequests = 0;
+    await page.route("**/api/recording**", route => {
+      if (route.request().method() === "DELETE") {
+        stopRequests++;
+        assert.ok(route.request().url().endsWith("/recording/" + program.id));
+        stopped = true;
+        return route.fulfill({ json: {} });
+      }
+      return route.fulfill({ json: stopped ? [] : [program] });
+    });
+    await loaded(page);
+    await page.locator('button[title="録画を停止"]').first().click();
+    assert.equal(await page.locator("#confirmDialogTitle").textContent(), "録画停止の確認");
+    assert.match(await page.locator("#confirmDialogMessage").textContent(), /途中までの録画を保存/);
+    assert.equal(await page.locator("#confirmDialogOK").textContent(), "停止");
+    await capture(page, "manual-stop-confirmation");
+    await page.locator("#confirmDialogCancel").click();
+    assert.equal(stopRequests, 0);
+    await page.locator('button[title="録画を停止"]').first().click();
+    await page.locator("#confirmDialogOK").click();
+    await page.waitForFunction(() => !document.querySelector("#confirmDialog").open);
+    await page.locator('button[title="録画を停止"]').waitFor({ state: "hidden" });
+    assert.equal(stopRequests, 1);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
 test("Mochizuki branding and legacy browser preferences", async () => {
   const { page, context } = await pageFor();
   try {

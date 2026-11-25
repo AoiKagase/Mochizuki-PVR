@@ -780,7 +780,7 @@ func recordProgramWithLog(ctx context.Context, databasePath, logPath string, cfg
 			_ = os.Remove(partPath)
 		}
 	}()
-	out, err := os.OpenFile(partPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	out, err := os.OpenFile(partPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0o644)
 	if err != nil {
 		return program, err
 	}
@@ -796,6 +796,12 @@ func recordProgramWithLog(ctx context.Context, databasePath, logPath string, cfg
 			return program, recordCtx.Err()
 		}
 		return program, copyErr
+	}
+	if userStopped || endReached.Load() {
+		if err := truncateIncompleteTSPacket(out); err != nil {
+			out.Close()
+			return program, err
+		}
 	}
 	if err := out.Sync(); err != nil {
 		out.Close()
